@@ -1,1 +1,14 @@
-﻿{"version": "0.0.0", "snn": null, "lnn": null, "xgb": null, "validation_f1": {"snn": null, "lnn": null, "xgb": null}}
+{
+  "version": "1.0.0",
+  "snn": "snn_legacy_v1.pt",
+  "lnn": "lnn_legacy_v1.pt",
+  "xgb": "xgboost_legacy_v1.json",
+  "validation_f1": {
+    "snn": null,
+    "lnn": null,
+    "xgb": null
+  },
+  "timestamp": "2026-04-25T00:00:00Z",
+  "artifact_format": "legacy-v1",
+  "artifact_source": "artifacts/artifacts"
+}

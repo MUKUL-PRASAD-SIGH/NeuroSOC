@@ -47,13 +47,23 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
+def _resolve_model_dir() -> Path:
+    configured = os.getenv("MODEL_PATH")
+    if configured:
+        return Path(configured).expanduser()
+    container_models = Path("/models")
+    if os.name != "nt" and container_models.exists():
+        return container_models
+    return REPO_ROOT / "models"
+
+
 KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP", "kafka:9092")
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 INPUT_TOPIC = os.getenv("INFERENCE_INPUT_TOPIC", "extracted-features")
 VERDICTS_TOPIC = os.getenv("VERDICTS_TOPIC", "verdicts")
 ALERTS_TOPIC = os.getenv("ALERTS_TOPIC", "alerts")
 GROUP_ID = os.getenv("INFERENCE_GROUP_ID", "inference-service")
-MODEL_DIR = Path(os.getenv("MODEL_PATH", "/models"))
+MODEL_DIR = _resolve_model_dir()
 MODEL_VERSION_PATH = Path(os.getenv("MODEL_VERSION_FILE", str(MODEL_DIR / "model_version.json")))
 MODEL_POLL_SECONDS = float(os.getenv("MODEL_POLL_SECONDS", "60"))
 CONSUMER_RETRY_SECONDS = float(os.getenv("CONSUMER_RETRY_SECONDS", "5"))
@@ -123,6 +133,7 @@ class SessionAnalyzeRequest(BaseModel):
     user_id: str = "unknown-user"
     source_ip: str = "unknown"
     flow_features: list[float] = Field(..., min_length=80, max_length=80)
+    raw_flow_features: list[float] | None = Field(default=None, min_length=80, max_length=80)
     behavioral_events: list[dict[str, Any]] = Field(default_factory=list)
     behavioral_vector: list[float] | None = None
     session_sequence: list[list[float]] | None = None
@@ -904,6 +915,7 @@ class InferenceRuntime:
             "user_id": payload.get("user_id") or payload.get("src_ip", "unknown-user"),
             "source_ip": payload.get("src_ip", "unknown"),
             "flow_features": payload.get("features", []),
+            "raw_flow_features": payload.get("raw_features"),
             "timestamp": payload.get("timestamp", time.time()),
             "protocol": payload.get("protocol"),
             "dst_ip": payload.get("dst_ip"),

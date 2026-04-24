@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="NeuroShield">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#11d6ff"/>
+      <stop offset="100%" stop-color="#1dd881"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="#101827"/>
+  <path d="M32 8l16 6v14c0 13-8.4 23.7-16 28-7.6-4.3-16-15-16-28V14l16-6z" fill="none" stroke="url(#g)" stroke-width="4"/>
+  <circle cx="32" cy="30" r="6" fill="url(#g)"/>
+</svg>

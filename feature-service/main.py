@@ -300,7 +300,19 @@ def _get_scaler():
 
 
 # ─── Feature extraction ───────────────────────────────────────────────────────
-def extract_features(flow: FlowRecord) -> list[float]:
+def _scale_features(features: list[float]) -> list[float]:
+    scaled = list(features)
+    scaler = _get_scaler()
+    if scaler is not None:
+        try:
+            transformed = scaler.transform([scaled])[0]
+            scaled = [float(value) for value in transformed]
+        except Exception as exc:
+            log.error("Scaling error: %s", exc)
+    return scaled
+
+
+def extract_raw_features(flow: FlowRecord) -> list[float]:
     """Extract exactly 80 CICFlowMeter-style features from a FlowRecord."""
     # Enforce minimum 1 millisecond duration to prevent rate explosions
     duration  = max(flow.last_ts - flow.start_ts, 0.001)
@@ -468,18 +480,13 @@ def extract_features(flow: FlowRecord) -> list[float]:
     # Sanitize: replace NaN / Inf with 0.0
     features = [0.0 if (math.isnan(v) or math.isinf(v)) else round(v, 6) for v in features]
 
-    # Normalize values to 0.0 -> 1.0 using trained scaler from Phase 3
-    scaler = _get_scaler()
-    if scaler is not None:
-        try:
-            scaled = scaler.transform([features])[0]
-            features = [float(v) for v in scaled]
-        except Exception as exc:
-            log.error("Scaling error: %s", exc)
-
     log.info("Extracted Feature Length: %d", len(features))
     assert len(features) == 80, f"BUG: feature count is {len(features)}, expected 80"
     return features
+
+
+def extract_features(flow: FlowRecord) -> list[float]:
+    return _scale_features(extract_raw_features(flow))
 
 
 # ─── Kafka helpers ────────────────────────────────────────────────────────────
@@ -572,7 +579,8 @@ def _janitor(producer: KafkaProducer) -> None:
             if flow is None:
                 continue
             try:
-                feats = extract_features(flow)
+                raw_feats = extract_raw_features(flow)
+                feats = _scale_features(raw_feats)
                 msg = {
                     "flow_id":   str(uuid.uuid4()),
                     "src_ip":    key[0],
@@ -581,6 +589,7 @@ def _janitor(producer: KafkaProducer) -> None:
                     "dst_port":  key[3],
                     "protocol":  key[4],
                     "features":  feats,
+                    "raw_features": raw_feats,
                     "timestamp": flow.last_ts,
                     "n_packets": len(flow.fwd_pkts) + len(flow.bwd_pkts),
                 }

@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react';
+import { postBehavioral } from '../../lib/portalApi';
 
 interface BehavioralEvent {
   type: 'keydown' | 'keyup' | 'mousemove' | 'click' | 'scroll';
@@ -19,7 +20,7 @@ export function useBehavioralTracker(userId: string = 'anonymous') {
   const sessionId = useRef(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   const eventBuffer = useRef<BehavioralEvent[]>([]);
   const lastMouseMove = useRef<number>(0);
-  const flushInterval = useRef<NodeJS.Timeout | null>(null);
+  const flushInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const isTracking = useRef(false);
 
   const flushEvents = useCallback(async () => {
@@ -32,10 +33,10 @@ export function useBehavioralTracker(userId: string = 'anonymous') {
     };
 
     try {
-      await fetch('/api/behavioral', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+      await postBehavioral({
+        userId: data.user_id,
+        sessionId: data.session_id,
+        events: data.events,
       });
       eventBuffer.current = [];
     } catch (error) {
@@ -145,6 +146,7 @@ export function useBehavioralTracker(userId: string = 'anonymous') {
   return {
     sessionId: sessionId.current,
     eventCount: eventBuffer.current.length,
+    flushEvents,
     startTracking,
     stopTracking
   };

@@ -1,6 +1,8 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router';
+import { useNavigate, Link } from 'react-router-dom';
 import { useBehavioralTracker } from '../hooks/useBehavioralTracker';
+import { getUserVerdict, loginBank, reportHoneypotHit } from '../../lib/portalApi';
+import { readPortalSession, writePortalSession } from '../../lib/portalSession';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -8,7 +10,9 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [confirmEmail, setConfirmEmail] = useState(''); // Honeypot field
   const [loading, setLoading] = useState(false);
-  const { sessionId, startTracking, stopTracking } = useBehavioralTracker(email || 'anonymous');
+  const [error, setError] = useState('');
+  const storedSession = readPortalSession();
+  const { sessionId, startTracking, stopTracking, flushEvents } = useBehavioralTracker(email || storedSession.email || 'anonymous');
 
   useEffect(() => {
     startTracking();
@@ -18,65 +22,58 @@ export default function Login() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
 
     try {
-      // 1. Check honeypot - if filled, it's a bot
+      await flushEvents();
+
       if (confirmEmail) {
-        await fetch('/api/bank/honeypot-hit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email,
-            honeypot_field: 'confirm_email',
-            honeypot_value: confirmEmail,
-            session_id: sessionId
-          })
+        const honeypot = await reportHoneypotHit('login_form', email || 'anonymous', sessionId);
+        writePortalSession({
+          sessionId: honeypot.sessionId,
+          email,
+          verdict: honeypot.verdict,
+          sandbox: honeypot.sandbox || null,
+          authenticated: false,
         });
-        // Continue to appear normal to the bot
-      }
-
-      // 2. POST behavioral data
-      await fetch('/api/behavioral', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: email,
-          session_id: sessionId,
-          events: []
-        })
-      });
-
-      // 3. Attempt login
-      const loginResponse = await fetch('/api/bank/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      if (!loginResponse.ok) {
-        alert('Invalid credentials. Please try again.');
-        setLoading(false);
+        navigate('/security-alert');
         return;
       }
 
-      // 4. Check verdict
-      const userId = email.replace(/[^a-zA-Z0-9]/g, '_');
-      const verdictResponse = await fetch(`/api/verdicts/${userId}`);
+      const loginData = await loginBank({
+        email,
+        password,
+        sessionId,
+      });
 
-      if (verdictResponse.ok) {
-        const verdict = await verdictResponse.json();
+      const verdict = await getUserVerdict(loginData.user_id);
 
-        if (verdict.verdict === 'HACKER') {
-          navigate('/security-alert');
-          return;
-        }
+      writePortalSession({
+        sessionId: loginData.sessionId,
+        email,
+        userId: loginData.user_id,
+        displayName: loginData.displayName,
+        authenticated: loginData.authenticated,
+        verdict: verdict.verdict,
+        confidence: verdict.confidence,
+        sandbox: loginData.sandbox || verdict.sandbox || null,
+        account: loginData.account,
+      });
+
+      if (!loginData.authenticated && !(loginData.sandbox?.active || verdict.sandbox?.active)) {
+        setError(loginData.error || 'Invalid credentials. Please try again.');
+        return;
       }
 
-      // 5. Success - go to dashboard
+      if (verdict.verdict === 'HACKER' || loginData.sandbox?.active || verdict.sandbox?.active) {
+        navigate('/security-alert');
+        return;
+      }
+
       navigate('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
-      alert('An error occurred. Please try again.');
+      setError(error instanceof Error ? error.message : 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -160,6 +157,12 @@ export default function Login() {
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
+
+            {error ? (
+              <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 font-['Inter']">
+                {error}
+              </div>
+            ) : null}
           </form>
 
           <div className="mt-6 text-center">

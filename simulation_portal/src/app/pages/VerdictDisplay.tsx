@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
-import { getCurrentVerdict } from '../../lib/portalApi';
 
 interface Verdict {
-  sessionId?: string | null;
-  user_id?: string;
-  snnScore: number;
-  lnnClass: string;
-  xgbClass: string;
-  behavioralDelta: number;
+  user_id: string;
+  snn_score: number;
+  lnn_class: string;
+  xgboost_class: string;
+  behavioral_delta: number;
   confidence: number;
-  verdict: 'LEGITIMATE' | 'FORGETFUL_USER' | 'HACKER' | string;
+  verdict: 'LEGITIMATE' | 'SUSPICIOUS' | 'HACKER';
   timestamp: string;
 }
 
@@ -21,14 +19,15 @@ export default function VerdictDisplay() {
   useEffect(() => {
     const fetchVerdict = async () => {
       try {
-        const data = await getCurrentVerdict();
-        setVerdict({
-          ...data,
-          user_id: data.sessionId || 'active-session',
-          timestamp: new Date().toISOString(),
-        });
-        setError(null);
-        setLoading(false);
+        const response = await fetch('/api/verdicts/current');
+        if (response.ok) {
+          const data = await response.json();
+          setVerdict(data);
+          setLoading(false);
+        } else {
+          setError('No active session');
+          setLoading(false);
+        }
       } catch (err) {
         setError('Failed to fetch verdict');
         setLoading(false);
@@ -47,7 +46,7 @@ export default function VerdictDisplay() {
   const getVerdictColor = (verdict: string, confidence: number) => {
     if (confidence < 0.5) return 'text-yellow-600 bg-yellow-100';
     if (verdict === 'HACKER') return 'text-red-600 bg-red-100';
-    if (verdict === 'SUSPICIOUS' || verdict === 'FORGETFUL_USER') return 'text-amber-600 bg-amber-100';
+    if (verdict === 'SUSPICIOUS') return 'text-amber-600 bg-amber-100';
     return 'text-green-600 bg-green-100';
   };
 
@@ -140,26 +139,26 @@ export default function VerdictDisplay() {
                   <div className="flex items-center justify-between py-2 border-b border-gray-700">
                     <span className="text-gray-400 font-['Inter']">SNN Score</span>
                     <span className="font-mono text-lg font-bold">
-                      {verdict.snnScore.toFixed(4)}
+                      {verdict.snn_score.toFixed(4)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-gray-700">
                     <span className="text-gray-400 font-['Inter']">LNN Classification</span>
                     <span className="font-mono text-lg font-bold">
-                      {verdict.lnnClass}
+                      {verdict.lnn_class}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-gray-700">
                     <span className="text-gray-400 font-['Inter']">XGBoost Class</span>
                     <span className="font-mono text-lg font-bold">
-                      {verdict.xgbClass}
+                      {verdict.xgboost_class}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2">
                     <span className="text-gray-400 font-['Inter']">Behavioral Δ</span>
                     <span className="font-mono text-lg font-bold">
-                      {verdict.behavioralDelta > 0 ? '+' : ''}
-                      {verdict.behavioralDelta.toFixed(3)}
+                      {verdict.behavioral_delta > 0 ? '+' : ''}
+                      {verdict.behavioral_delta.toFixed(3)}
                     </span>
                   </div>
                 </div>

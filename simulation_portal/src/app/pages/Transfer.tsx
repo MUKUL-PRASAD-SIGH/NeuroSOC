@@ -1,13 +1,8 @@
-import { useEffect, useState, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { reportHoneypotHit, reportWebAttack, transferBank } from '../../lib/portalApi';
-import { readPortalSession, writePortalSession } from '../../lib/portalSession';
-import { getMockUser } from '../../lib/portalMock';
+import { useState, FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router';
 
 export default function Transfer() {
   const navigate = useNavigate();
-  const session = readPortalSession();
-  const profile = getMockUser(session.userId || session.email);
   const [recipientName, setRecipientName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [routingNumber, setRoutingNumber] = useState('');
@@ -15,12 +10,6 @@ export default function Transfer() {
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!session.userId || !session.authenticated) {
-      navigate('/login', { replace: true });
-    }
-  }, [navigate, session.authenticated, session.userId]);
 
   const detectSQLInjection = (text: string): boolean => {
     const sqlPatterns = [
@@ -41,34 +30,35 @@ export default function Transfer() {
     setLoading(true);
 
     try {
+      // Check for SQL injection in memo field
       if (detectSQLInjection(memo)) {
-        await reportWebAttack(session.userId || 'unknown-user', session.sessionId, memo);
+        await fetch('/api/bank/web-attack-detected', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            attack_type: 'sql_injection',
+            field: 'memo',
+            value: memo,
+            timestamp: new Date().toISOString()
+          })
+        });
       }
 
+      // Check honeypot
       if (confirmRoutingNumber) {
-        await reportHoneypotHit('transfer_form', session.userId || 'unknown-user', session.sessionId);
+        await fetch('/api/bank/honeypot-hit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            honeypot_field: 'confirm_routing_number',
+            honeypot_value: confirmRoutingNumber,
+            timestamp: new Date().toISOString()
+          })
+        });
       }
 
-      const result = await transferBank({
-        userId: session.userId || 'unknown-user',
-        sessionId: session.sessionId,
-        destination: `${recipientName} ${accountNumber} ${routingNumber}`.trim(),
-        amount: Number(amount),
-        memo,
-        confirmRoutingNumber,
-      });
-
-      writePortalSession({
-        sessionId: result.sessionId,
-        verdict: result.verdict,
-        confidence: result.confidence,
-        sandbox: result.sandbox || null,
-      });
-
-      if (result.sandbox?.active || result.verdict === 'HACKER') {
-        navigate('/security-alert');
-        return;
-      }
+      // Simulate transfer processing
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       alert(`Transfer of $${amount} to ${recipientName} has been initiated.`);
       navigate('/dashboard');
@@ -118,10 +108,8 @@ export default function Transfer() {
                 From Account
               </label>
               <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <p className="font-['Inter'] font-medium text-[#002147]">Checking {session.account?.accountMasked || profile?.account.accountMasked || '****8742'}</p>
-                <p className="text-sm text-gray-600 font-['Inter'] mt-1">
-                  Available: ${(session.account?.balance ?? profile?.account.balance ?? 8432.67).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
+                <p className="font-['Inter'] font-medium text-[#002147]">Checking ****8742</p>
+                <p className="text-sm text-gray-600 font-['Inter'] mt-1">Available: $8,432.67</p>
               </div>
             </div>
 

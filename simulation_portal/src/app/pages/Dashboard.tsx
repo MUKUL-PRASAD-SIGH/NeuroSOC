@@ -1,43 +1,35 @@
 import { useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { clearPortalSession, readPortalSession, setDebugToken } from '../../lib/portalSession';
-import { getMockDashboardData } from '../../lib/portalMock';
+import { Link, useNavigate } from 'react-router';
 
 const CANARY_TOKEN = 'NT_CANARY_7f8e9d2a1b3c4e5f6g7h8i9j0k';
 
+const FAKE_TRANSACTIONS = [
+  { id: 1, date: '2026-04-24', description: 'Amazon.com', amount: -87.42, type: 'debit' },
+  { id: 2, date: '2026-04-23', description: 'Direct Deposit - ACME Corp', amount: 3250.00, type: 'credit' },
+  { id: 3, date: '2026-04-22', description: 'Whole Foods Market', amount: -156.23, type: 'debit' },
+  { id: 4, date: '2026-04-21', description: 'Shell Gas Station', amount: -52.10, type: 'debit' },
+  { id: 5, date: '2026-04-20', description: 'Netflix Subscription', amount: -15.99, type: 'debit' },
+  { id: 6, date: '2026-04-19', description: 'ATM Withdrawal', amount: -200.00, type: 'debit' },
+  { id: 7, date: '2026-04-18', description: 'Starbucks', amount: -6.75, type: 'debit' },
+  { id: 8, date: '2026-04-17', description: 'Venmo - Sarah Johnson', amount: -50.00, type: 'debit' },
+  { id: 9, date: '2026-04-16', description: 'Target', amount: -124.56, type: 'debit' },
+  { id: 10, date: '2026-04-15', description: 'Interest Payment', amount: 12.34, type: 'credit' }
+];
+
 export default function Dashboard() {
   const navigate = useNavigate();
-  const session = readPortalSession();
-  const dashboardData = getMockDashboardData(session.userId || session.email);
-  const displayName = session.displayName || dashboardData.displayName;
-  const balance = session.account?.balance ?? dashboardData.account.balance;
-  const accountMasked = session.account?.accountMasked || dashboardData.account.accountMasked;
-  const transactions = dashboardData.transactions.map((transaction) => ({
-    id: transaction.id,
-    date: transaction.date,
-    description: transaction.merchant,
-    amount: transaction.amount,
-    type: transaction.type === 'CREDIT' ? 'credit' : 'debit',
-  }));
 
   useEffect(() => {
-    if (!session.userId || !session.authenticated) {
-      navigate('/login', { replace: true });
-      return;
-    }
-
-    if (session.sandbox?.active || session.verdict === 'HACKER') {
-      navigate('/security-alert', { replace: true });
-      return;
-    }
-
-    setDebugToken(CANARY_TOKEN);
-  }, [navigate, session.authenticated, session.sandbox?.active, session.userId, session.verdict]);
+    // Store canary token in localStorage
+    localStorage.setItem('debug_session', CANARY_TOKEN);
+  }, []);
 
   const handleLogout = () => {
-    clearPortalSession();
+    localStorage.removeItem('debug_session');
     navigate('/');
   };
+
+  const balance = 8432.67;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -73,7 +65,7 @@ export default function Dashboard() {
         {/* Welcome */}
         <div className="mb-8">
           <h2 className="font-['Playfair_Display'] text-3xl text-[#002147] font-bold mb-2">
-            Welcome back, {displayName.split(' ')[0]}
+            Welcome back, John
           </h2>
           <p className="text-gray-600 font-['Inter']">Here's your account summary</p>
         </div>
@@ -82,7 +74,7 @@ export default function Dashboard() {
         <div className="bg-gradient-to-r from-[#002147] to-[#003366] rounded-lg p-8 mb-8 text-white">
           <div className="mb-4">
             <p className="text-sm opacity-90 font-['Inter']">Checking Account</p>
-            <p className="text-xs opacity-75 font-['Inter'] mt-1">{accountMasked}</p>
+            <p className="text-xs opacity-75 font-['Inter'] mt-1">****8742</p>
           </div>
           <div>
             <p className="text-sm opacity-90 mb-2 font-['Inter']">Available Balance</p>
@@ -136,7 +128,7 @@ export default function Dashboard() {
             </h3>
           </div>
           <div className="divide-y divide-gray-200">
-            {transactions.map((transaction) => (
+            {FAKE_TRANSACTIONS.map((transaction) => (
               <div key={transaction.id} className="p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${

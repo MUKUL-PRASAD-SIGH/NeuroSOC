@@ -1,9 +1,6 @@
-import { Link } from 'react-router-dom';
-import { clearPortalSession, readPortalSession } from '../../lib/portalSession';
+import { Link } from 'react-router';
 
 export default function SecurityAlert() {
-  const session = readPortalSession();
-
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
       <div className="max-w-md w-full">
@@ -34,9 +31,6 @@ export default function SecurityAlert() {
             <p className="text-gray-600 font-['Inter']">
               Your session has been temporarily suspended for security purposes.
             </p>
-            <p className="text-xs text-gray-400 font-['Inter'] mt-3">
-              Reference: {session.sessionId}
-            </p>
           </div>
 
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
@@ -56,15 +50,12 @@ export default function SecurityAlert() {
           </div>
 
           <div className="space-y-3">
-            <Link to="/" onClick={() => clearPortalSession()}>
+            <Link to="/">
               <button className="w-full bg-[#002147] text-white py-3 rounded-lg hover:bg-[#003366] transition-colors font-['Inter'] font-medium">
                 Return to Home
               </button>
             </Link>
-            <button
-              onClick={() => window.alert('Support case opened for this demo session.')}
-              className="w-full border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors font-['Inter'] font-medium"
-            >
+            <button className="w-full border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors font-['Inter'] font-medium">
               Contact Support
             </button>
           </div>

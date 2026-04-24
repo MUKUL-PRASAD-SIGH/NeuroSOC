@@ -8,57 +8,8 @@ import {
 
 const MAX_ALERTS = 50;
 const DEV_MOCK_STREAM_INTERVAL_MS = 6000;
-const SOCKET_RECONNECT_DELAY_MS = 3000;
-let preferMockData = false;
-
-function isDevelopmentMockFallbackEnabled() {
-  return import.meta.env.DEV;
-}
-
-function isNetworkError(error) {
-  if (!error) {
-    return false;
-  }
-
-  if (error.name === "AxiosError") {
-    return !error.response;
-  }
-
-  if (error instanceof TypeError) {
-    return /fetch|network/i.test(error.message);
-  }
-
-  return false;
-}
-
-async function withMockFallback(loadLiveData, loadMockData) {
-  if (preferMockData && isDevelopmentMockFallbackEnabled()) {
-    return loadMockData();
-  }
-
-  try {
-    return await loadLiveData();
-  } catch (error) {
-    if (isDevelopmentMockFallbackEnabled() && isNetworkError(error)) {
-      preferMockData = true;
-      return loadMockData();
-    }
-    throw error;
-  }
-}
-
-function startMockAlertStream({ onMessage, onStatusChange }) {
-  onStatusChange?.("connected");
-
-  const intervalId = window.setInterval(() => {
-    onMessage?.(normalizeAlert(createMockAlert()));
-  }, DEV_MOCK_STREAM_INTERVAL_MS);
-
-  return () => {
-    window.clearInterval(intervalId);
-    onStatusChange?.("disconnected");
-  };
-}
+const DEV_MOCK_ENABLED =
+  import.meta.env.DEV && String(import.meta.env.VITE_ENABLE_MSW || "false").toLowerCase() === "true";
 
 function normalizeAlert(alert) {
   return {
@@ -86,64 +37,40 @@ function sortAlerts(alerts) {
 }
 
 export async function getStats() {
-  if (!getApiBaseUrl()) {
-    return mockStats;
-  }
-  return withMockFallback(
-    async () => {
-      const { data } = await apiClient.get("/api/stats");
-      return data;
-    },
-    () => mockStats
-  );
+  const { data } = await apiClient.get("/api/stats");
+  return data;
 }
 
 export async function getModelVersion() {
-  if (!getApiBaseUrl()) {
-    return mockModelStatus;
-  }
-  return withMockFallback(
-    async () => {
-      const { data } = await apiClient.get("/api/model/version");
-      return data;
-    },
-    () => mockModelStatus
-  );
+  const { data } = await apiClient.get("/api/model/version");
+  return data;
 }
 
 export async function getAlerts() {
-  if (!getApiBaseUrl()) {
-    return sortAlerts(mockAlerts);
-  }
-  return withMockFallback(
-    async () => {
-      const { data } = await apiClient.get("/api/alerts");
-      return sortAlerts(Array.isArray(data) ? data : []);
-    },
-    () => sortAlerts(mockAlerts)
-  );
+  const { data } = await apiClient.get("/api/alerts");
+  return sortAlerts(Array.isArray(data) ? data : []);
 }
 
 export function subscribeToAlerts({ onMessage, onStatusChange, onError }) {
-  if ((!getApiBaseUrl() && import.meta.env.DEV) || (preferMockData && isDevelopmentMockFallbackEnabled())) {
-    return startMockAlertStream({ onMessage, onStatusChange });
+  if (DEV_MOCK_ENABLED) {
+    onStatusChange?.("connected");
+
+    const intervalId = window.setInterval(() => {
+      onMessage?.(normalizeAlert(createMockAlert()));
+    }, DEV_MOCK_STREAM_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+      onStatusChange?.("disconnected");
+    };
   }
 
   let socket;
   let reconnectTimer;
   let isClosed = false;
-  let stopMockStream;
-
-  const switchToMockStream = () => {
-    if (isClosed || stopMockStream) {
-      return;
-    }
-
-    stopMockStream = startMockAlertStream({ onMessage, onStatusChange });
-  };
 
   const connect = () => {
-    if (isClosed || stopMockStream) {
+    if (isClosed) {
       return;
     }
 
@@ -166,23 +93,13 @@ export function subscribeToAlerts({ onMessage, onStatusChange, onError }) {
     };
 
     socket.onerror = () => {
-      const error = new Error("Alert stream connection error");
-      if (isDevelopmentMockFallbackEnabled()) {
-        preferMockData = true;
-        switchToMockStream();
-        return;
-      }
-      onError?.(error);
+      onError?.(new Error("Alert stream connection error"));
     };
 
     socket.onclose = () => {
-      if (stopMockStream) {
-        return;
-      }
-
       onStatusChange?.("reconnecting");
       if (!isClosed) {
-        reconnectTimer = window.setTimeout(connect, SOCKET_RECONNECT_DELAY_MS);
+        reconnectTimer = window.setTimeout(connect, 3000);
       }
     };
   };
@@ -192,13 +109,10 @@ export function subscribeToAlerts({ onMessage, onStatusChange, onError }) {
   return () => {
     isClosed = true;
     window.clearTimeout(reconnectTimer);
-    stopMockStream?.();
     if (socket && socket.readyState < WebSocket.CLOSING) {
       socket.close();
     }
-    if (!stopMockStream) {
-      onStatusChange?.("disconnected");
-    }
+    onStatusChange?.("disconnected");
   };
 }
 

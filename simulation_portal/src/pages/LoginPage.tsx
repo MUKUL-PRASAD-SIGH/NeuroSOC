@@ -3,83 +3,55 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useBehavioralTracker } from '../hooks/useBehavioralTracker';
 import { Lock, Mail, Loader2 } from 'lucide-react';
-import { getUserVerdict, loginBank, reportHoneypotHit } from '../lib/portalApi';
-import { readPortalSession, writePortalSession } from '../lib/portalSession';
+import { apiJson } from '../lib/apiClient';
 
 export default function LoginPage() {
-  const storedSession = readPortalSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [usernameConfirm, setUsernameConfirm] = useState('');
+  const [confirmEmail, setConfirmEmail] = useState(''); // Honeypot
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
-  const tracker = useBehavioralTracker({
-    userId: email || storedSession.email || 'anonymous',
-    sessionId: storedSession.sessionId,
-    page: '/login',
-  });
+  const tracker = useBehavioralTracker(email || 'anonymous');
 
   useEffect(() => {
     tracker.startTracking();
     return () => tracker.stopTracking();
-  }, [tracker.startTracking, tracker.stopTracking]);
+  }, [tracker]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+
+    // 1. Honeypot check
+    if (confirmEmail) {
+      await apiJson<{ status: string }>('/api/bank/honeypot-hit', {
+        method: 'POST',
+        body: JSON.stringify({ user_id: email || 'anonymous', source: 'login_form' })
+      });
+      // Just wait a bit to simulate processing even for bots
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
+    // 2. Behavioral flush (done automatically on stop, but let's be explicit)
+    // Actually the tracker flushes every 10s and on stop.
 
     try {
-      await tracker.flushEvents();
-
-      if (usernameConfirm) {
-        const honeypot = await reportHoneypotHit('login_form', email || 'anonymous', tracker.sessionId);
-        writePortalSession({
-          sessionId: honeypot.sessionId,
-          email,
-          verdict: honeypot.verdict,
-          sandbox: honeypot.sandbox || null,
-          authenticated: false,
-        });
-        navigate('/security-alert');
-        return;
-      }
-
-      const loginData = await loginBank({
-        email,
-        password,
-        sessionId: tracker.sessionId,
+      // 3. Login attempt
+      const loginData = await apiJson<{ user_id: string; verdict: string }>('/api/bank/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password })
       });
 
-      const verdictData = await getUserVerdict(loginData.user_id);
-      writePortalSession({
-        sessionId: loginData.sessionId,
-        email,
-        userId: loginData.user_id,
-        displayName: loginData.displayName,
-        authenticated: loginData.authenticated,
-        verdict: verdictData.verdict,
-        confidence: verdictData.confidence,
-        sandbox: loginData.sandbox || verdictData.sandbox || null,
-        account: loginData.account,
-      });
+      // 4. Verdict check
+      const verdictData = await apiJson<{ verdict: string }>(`/api/verdicts/${loginData.user_id}`);
 
-      if (!loginData.authenticated && !(loginData.sandbox?.active || verdictData.sandbox?.active)) {
-        setError(loginData.error || 'Invalid credentials.');
-        return;
-      }
-
-      if (verdictData.verdict === 'HACKER' || loginData.sandbox?.active || verdictData.sandbox?.active) {
+      if (verdictData.verdict === 'HACKER') {
         navigate('/security-alert');
-      } else if (loginData.next === '/dashboard') {
-        navigate('/dashboard');
       } else {
-        navigate(loginData.next || '/dashboard');
+        navigate('/dashboard');
       }
     } catch (error) {
       console.error('Login failed:', error);
-      setError(error instanceof Error ? error.message : 'Login failed.');
     } finally {
       setIsLoading(false);
     }
@@ -100,10 +72,10 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
           {/* Honeypot Field */}
           <input 
-            name="username_confirm" 
+            name="confirm_email" 
             type="text"
-            value={usernameConfirm}
-            onChange={(e) => setUsernameConfirm(e.target.value)}
+            value={confirmEmail}
+            onChange={(e) => setConfirmEmail(e.target.value)}
             style={{ opacity: 0, position: 'absolute', top: '-9999px', left: '-9999px' }}
             tabIndex={-1}
             autoComplete="off"
@@ -146,25 +118,9 @@ export default function LoginPage() {
           >
             {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Secure Sign In'}
           </button>
-
-          {error ? (
-            <div className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600">
-              {error}
-            </div>
-          ) : null}
           
           <div className="text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('leo@novatrust.demo');
-                setPassword('wrong-password');
-                setError('Recovery simulation loaded. Submit to see a forgetful-user verdict.');
-              }}
-              className="text-xs font-semibold text-bank-accent hover:underline"
-            >
-              Forgot password?
-            </button>
+            <a href="#" className="text-xs font-semibold text-bank-accent hover:underline">Forgot password?</a>
           </div>
         </form>
 

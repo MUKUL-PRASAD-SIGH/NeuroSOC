@@ -5,11 +5,7 @@ import router from "./router";
 import "./index.css";
 
 async function bootstrap() {
-  const mockEnabled =
-    import.meta.env.DEV &&
-    String(import.meta.env.VITE_ENABLE_MSW || "false").toLowerCase() === "true";
-
-  if (mockEnabled) {
+  if (import.meta.env.DEV) {
     try {
       const { worker } = await import("./mocks/browser");
       await worker.start({ onUnhandledRequest: "bypass" });

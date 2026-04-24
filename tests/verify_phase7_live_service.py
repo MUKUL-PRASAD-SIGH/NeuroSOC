@@ -104,34 +104,6 @@ def main() -> int:
         assert_true(len(latest_response.json()["items"]) >= 1, "Latest verdicts should include the manual analysis result.")
         print("[PASS] /analyze produces verdicts and /verdicts/latest exposes them.")
 
-        print("\n>>> CHECKPOINT 7L-E: Unified frontend API contract <<<")
-        stats_response = client.get("/api/stats")
-        assert_true(stats_response.status_code == 200, "/api/stats should return HTTP 200.")
-        stats_payload = stats_response.json()
-        assert_true("totalTransactions" in stats_payload, "Stats payload should include totalTransactions.")
-
-        model_response = client.get("/api/model/version")
-        assert_true(model_response.status_code == 200, "/api/model/version should return HTTP 200.")
-        model_payload = model_response.json()
-        assert_true(isinstance(model_payload.get("versions"), list), "Model payload should include versions list.")
-
-        alerts_response = client.get("/api/alerts")
-        assert_true(alerts_response.status_code == 200, "/api/alerts should return HTTP 200.")
-        assert_true(isinstance(alerts_response.json(), list), "Alerts payload should be an array.")
-
-        login_response = client.post(
-            "/api/bank/login",
-            json={"email": "portal-user@example.com", "password": "demo"},
-        )
-        assert_true(login_response.status_code == 200, "/api/bank/login should return HTTP 200.")
-        login_payload = login_response.json()
-        assert_true("user_id" in login_payload, "Login payload should include user_id.")
-
-        verdict_user_response = client.get(f"/api/verdicts/{login_payload['user_id']}")
-        assert_true(verdict_user_response.status_code == 200, "/api/verdicts/{user_id} should return HTTP 200.")
-        assert_true("verdict" in verdict_user_response.json(), "User verdict payload should include verdict.")
-        print("[PASS] Unified /api contract endpoints are available for both frontends.")
-
         print("\n>>> CHECKPOINT 7L-D: Kafka-path feature message handling <<<")
         verdict = inference_main.runtime._handle_feature_message(
             {

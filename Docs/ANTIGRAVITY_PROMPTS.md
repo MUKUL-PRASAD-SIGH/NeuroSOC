@@ -16,13 +16,7 @@
 
 ---
 
-## PROMPT 01 — Docker Compose1. Open Antigravity
-2. Start a new session for each major component
-3. Copy the prompt block exactly
-4. Paste into Antigravity
-5. Copy generated code to the correct file path
-6. Run the verification command shown
-7. Commit to git
+## PROMPT 01 — Docker Compose
 
 **File to create:** `docker-compose.yml`
 

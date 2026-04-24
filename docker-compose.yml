@@ -60,7 +60,7 @@ services:
       - neuroshield-net
       - sandbox-net
     ports:
-      - "55432:5432"
+      - "5432:5432"
     environment:
       POSTGRES_DB: neuroshield
       POSTGRES_USER: ns_user
@@ -221,11 +221,7 @@ services:
     restart: unless-stopped
 
   dashboard:
-    build:
-      context: ./dashboard
-      args:
-        VITE_API_URL: http://localhost:8000
-        VITE_ENABLE_MSW: "false"
+    build: ./dashboard
     container_name: neuroshield-dashboard
     profiles: ["phase11plus"]
     networks: [neuroshield-net]
@@ -234,10 +230,7 @@ services:
     restart: unless-stopped
 
   simulation_portal:
-    build:
-      context: ./simulation_portal
-      args:
-        VITE_API_URL: http://localhost:8000
+    build: ./simulation_portal
     container_name: neuroshield-portal
     profiles: ["phase11plus"]
     networks: [neuroshield-net]

@@ -1,0 +1,13 @@
+kafka-python==2.0.2
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+asyncpg==0.29.0
+redis==5.0.4
+numpy==1.26.4
+torch==2.2.2
+xgboost==2.0.3
+scikit-learn==1.4.2
+joblib==1.4.2
+psycopg2-binary==2.9.9
+matplotlib==3.10.0
+pandas==2.3.3

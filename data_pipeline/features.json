@@ -1,0 +1,52 @@
+[
+  {
+    "failed_logins": 8,
+    "is_external": 0,
+    "is_sensitive_action": 1
+  },
+  {
+    "failed_logins": 8,
+    "is_external": 1,
+    "is_sensitive_action": 0
+  },
+  {
+    "failed_logins": 1,
+    "is_external": 1,
+    "is_sensitive_action": 0
+  },
+  {
+    "failed_logins": 2,
+    "is_external": 0,
+    "is_sensitive_action": 0
+  },
+  {
+    "failed_logins": 3,
+    "is_external": 0,
+    "is_sensitive_action": 0
+  },
+  {
+    "failed_logins": 5,
+    "is_external": 0,
+    "is_sensitive_action": 0
+  },
+  {
+    "failed_logins": 10,
+    "is_external": 1,
+    "is_sensitive_action": 1
+  },
+  {
+    "failed_logins": 10,
+    "is_external": 1,
+    "is_sensitive_action": 0
+  },
+  {
+    "failed_logins": 10,
+    "is_external": 0,
+    "is_sensitive_action": 0
+  },
+  {
+    "failed_logins": 3,
+    "is_external": 0,
+    "is_sensitive_action": 1
+  }
+]

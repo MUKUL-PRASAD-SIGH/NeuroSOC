@@ -1,0 +1,22 @@
+rules:
+  - name: admin_high_risk
+    condition:
+      user_role: admin
+      min_confidence: 0.8
+    action: REQUIRE_APPROVAL
+
+  - name: critical_attack
+    condition:
+      attack_type: WEB_ATTACK
+      min_confidence: 0.9
+    action: AUTO_CONTAIN
+
+  - name: medium_risk
+    condition:
+      min_confidence: 0.6
+    action: OBSERVE
+
+  - name: low_risk
+    condition:
+      min_confidence: 0.3
+    action: LOG_ONLY

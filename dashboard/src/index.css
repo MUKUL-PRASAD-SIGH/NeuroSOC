@@ -1,0 +1,163 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Orbitron:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  background: #0a0e1a;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(0, 0, 0, 0.16), transparent 28%),
+    radial-gradient(circle at 85% 18%, rgba(0, 0, 0, 0.1), transparent 24%),
+    linear-gradient(180deg, #000000 0%, #000000 100%);
+  color: #e7f1ff;
+  font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(10, 14, 26, 0.18), rgba(10, 14, 26, 0.18)),
+    repeating-linear-gradient(
+      90deg,
+      rgba(25, 230, 255, 0.03) 0,
+      rgba(25, 230, 255, 0.03) 1px,
+      transparent 1px,
+      transparent 96px
+    );
+  opacity: 0.9;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+@layer components {
+  .soc-shell {
+    @apply mx-auto min-h-screen w-full max-w-[1920px] px-4 pb-8 pt-5 md:px-6 lg:px-8;
+  }
+
+  .soc-glass {
+    @apply border border-soc-border/80 bg-soc-panel/70 backdrop-blur-xl;
+    box-shadow: 0 26px 72px rgba(2, 8, 22, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .soc-kicker {
+    @apply text-[12px] font-bold uppercase tracking-[0.24em] text-soc-muted;
+  }
+
+  .soc-title {
+    @apply text-3xl font-semibold leading-tight text-soc-text md:text-4xl;
+    font-family: "Orbitron", "Space Grotesk", sans-serif;
+  }
+}
+
+* {
+  scrollbar-width: none;
+  scrollbar-color: #29426c #10182c;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #10182c;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #29426c;
+  border-radius: 9999px;
+}
+
+.soc-hacker-alert {
+  animation: hackerPulse 1.6s;
+}
+
+.soc-threat-dot {
+  position: relative;
+  transform: translate(-50%, -50%);
+}
+
+.soc-threat-dot span,
+.soc-threat-dot::after {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: #ff4d5a;
+}
+
+.soc-threat-dot span {
+  box-shadow: 0 0 18px rgba(255, 77, 90, 0.95);
+}
+
+.soc-threat-dot::after {
+  content: "";
+  animation: threatPulse 1.8s ease-out infinite;
+  opacity: 0.5;
+}
+
+.leaflet-container {
+  background: #ffffff;
+  font-family: "IBM Plex Sans", sans-serif;
+}
+
+.leaflet-control-attribution {
+  background: rgba(10, 14, 26, 0.84) !important;
+  color: #93a9d1 !important;
+  border-radius: 9999px;
+  padding: 0 8px !important;
+  margin: 0 8px 8px 0 !important;
+}
+
+.leaflet-control-attribution a {
+  color: #19e6ff !important;
+}
+
+.soc-tooltip.leaflet-tooltip {
+  background: rgba(10, 14, 26, 0.94);
+  border: 1px solid #29426c;
+  color: #e7f1ff;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+}
+
+@keyframes hackerPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(255, 77, 90, 0), inset 0 0 0 1px rgba(255, 77, 90, 0.12);
+  }
+
+  50% {
+    box-shadow: 0 0 0 1px rgba(255, 77, 90, 0.18), 0 0 32px rgba(255, 77, 90, 0.16);
+  }
+}
+
+@keyframes threatPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .soc-hacker-alert {
+    animation-duration: 2.1s;
+  }
+}

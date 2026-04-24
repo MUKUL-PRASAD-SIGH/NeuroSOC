@@ -1,0 +1,4 @@
+kafka-python==2.0.2
+scapy==2.5.0
+fastapi==0.111.0
+uvicorn[standard]==0.29.0

@@ -91,7 +91,10 @@ export default function SecurityAlertPage() {
         <div className="space-y-4">
           <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Next Steps</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-bank-navy text-white px-8 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
+            <button
+              onClick={() => window.alert('Fraud team notified for this demo session.')}
+              className="bg-bank-navy text-white px-8 py-3 rounded-xl font-bold flex items-center justify-center gap-2"
+            >
               <PhoneCall className="w-4 h-4" /> Call Fraud Team
             </button>
             <Link to="/" className="border border-slate-200 px-8 py-3 rounded-xl font-bold hover:bg-slate-50 transition-all">

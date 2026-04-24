@@ -154,7 +154,17 @@ export default function LoginPage() {
           ) : null}
           
           <div className="text-center">
-            <a href="#" className="text-xs font-semibold text-bank-accent hover:underline">Forgot password?</a>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('leo@novatrust.demo');
+                setPassword('wrong-password');
+                setError('Recovery simulation loaded. Submit to see a forgetful-user verdict.');
+              }}
+              className="text-xs font-semibold text-bank-accent hover:underline"
+            >
+              Forgot password?
+            </button>
           </div>
         </form>
 

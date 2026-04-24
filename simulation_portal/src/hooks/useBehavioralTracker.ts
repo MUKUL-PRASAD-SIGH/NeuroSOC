@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { buildApiUrl } from '../lib/portalApi';
+import { postBehavioral } from '../lib/portalApi';
 
 interface UseBehavioralTrackerOptions {
   userId: string;
@@ -46,16 +46,11 @@ export function useBehavioralTracker({ userId, sessionId, page }: UseBehavioralT
     eventBuffer.current = [];
 
     try {
-      await fetch(buildApiUrl('/api/behavioral'), {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: userIdRef.current,
-          session_id: sessionIdRef.current,
-          events: eventsToFlush,
-          page: pageRef.current,
-        }),
+      await postBehavioral({
+        userId: userIdRef.current,
+        sessionId: sessionIdRef.current,
+        events: eventsToFlush,
+        page: pageRef.current,
       });
     } catch (error) {
       console.error('Failed to flush behavioral events:', error);

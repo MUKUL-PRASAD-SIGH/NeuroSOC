@@ -55,7 +55,21 @@ MAX_FLOWS             = int(os.getenv("MAX_FLOWS",          "100000"))
 IN_TOPIC              = "raw-packets"
 OUT_TOPIC             = "extracted-features"
 LOG_EVERY             = 100    # log every N flows
-DATA_DIR              = os.getenv("DATA_DIR",                "/data")
+
+def _resolve_data_dir() -> str:
+    configured = os.getenv("DATA_DIR")
+    if configured:
+        return configured
+
+    container_data_dir = "/data"
+    if os.name != "nt" and os.path.isdir(container_data_dir) and os.access(container_data_dir, os.W_OK):
+        return container_data_dir
+
+    # Local imports on Windows/macOS/Linux should fall back to the repo data dir.
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+
+
+DATA_DIR              = _resolve_data_dir()
 FEATURE_COLUMNS_FILE  = os.path.join(DATA_DIR, "feature_columns.txt")
 
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -266,7 +280,7 @@ def _safe_div(n: float, d: float) -> float:
 
 
 # ─── Scaler ───────────────────────────────────────────────────────────────────
-SCALER_PATH = "/data/scaler.pkl"
+SCALER_PATH = os.path.join(DATA_DIR, "scaler.pkl")
 _scaler = None
 _scaler_loaded = False
 

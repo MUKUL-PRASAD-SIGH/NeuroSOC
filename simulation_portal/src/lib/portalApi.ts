@@ -20,8 +20,14 @@ export interface BankTransferPayload {
   confirmRoutingNumber?: string;
 }
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
+export function buildApiUrl(path: string) {
+  return API_BASE_URL ? `${API_BASE_URL}${path}` : path;
+}
+
 async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, {
+  const response = await fetch(buildApiUrl(input), {
     credentials: 'include',
     ...init,
     headers: {

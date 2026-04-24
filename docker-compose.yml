@@ -128,7 +128,9 @@ services:
   inference:
     build: ./inference-service
     container_name: neuroshield-inference
-    networks: [neuroshield-net]
+    networks:
+      - neuroshield-net
+      - sandbox-net
     ports:
       - "8000:8000"
     depends_on:
@@ -148,6 +150,7 @@ services:
       MODEL_PATH: /models
       FEATURE_COLUMNS_PATH: /data/feature_columns.txt
       SANDBOX_CONFIDENCE_THRESHOLD: "0.50"
+      SANDBOX_BASE_URL: http://sandbox:8001
     restart: unless-stopped
 
   sandbox:
@@ -193,12 +196,16 @@ services:
     restart: unless-stopped
 
   retraining:
-    build: ./retraining-service
+    build:
+      context: .
+      dockerfile: retraining-service/Dockerfile
     container_name: neuroshield-retraining
     profiles: ["phase8plus"]
     networks: [neuroshield-net]
     depends_on:
       kafka:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     volumes:
       - ./data:/data
@@ -206,7 +213,11 @@ services:
     environment:
       KAFKA_BOOTSTRAP: kafka:9092
       DATABASE_URL: postgresql://ns_user:ns_pass@postgres:5432/neuroshield
-      RETRAIN_BATCH_SIZE: "500"
+      RETRAIN_MIN_FEEDBACK_SAMPLES: "5"
+      RETRAIN_INTERVAL_SECONDS: "30"
+      MODEL_VERSION_FILE: /models/model_version.json
+      RETRAIN_STATE_FILE: /models/retraining_state.json
+      INFERENCE_RELOAD_URL: http://inference:8000/models/reload
     restart: unless-stopped
 
   dashboard:

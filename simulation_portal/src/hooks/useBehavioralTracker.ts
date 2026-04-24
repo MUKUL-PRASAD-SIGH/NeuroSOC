@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { buildApiUrl } from '../lib/portalApi';
 
 interface UseBehavioralTrackerOptions {
   userId: string;
@@ -45,8 +46,9 @@ export function useBehavioralTracker({ userId, sessionId, page }: UseBehavioralT
     eventBuffer.current = [];
 
     try {
-      await fetch('/api/behavioral', {
+      await fetch(buildApiUrl('/api/behavioral'), {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: userIdRef.current,

@@ -39,9 +39,9 @@ export default function LandingPage() {
               <Link to="/login" className="bg-bank-accent text-bank-navy px-8 py-4 rounded-full font-bold text-lg hover:shadow-[0_0_20px_-5px_#c5a059] transition-all flex items-center justify-center gap-2">
                 Access Account <ArrowRight className="w-5 h-5" />
               </Link>
-              <button className="border border-white/20 hover:bg-white/5 px-8 py-4 rounded-full font-bold text-lg transition-all">
+              <Link to="/login" className="border border-white/20 hover:bg-white/5 px-8 py-4 rounded-full font-bold text-lg transition-all text-center">
                 Open Personal Account
-              </button>
+              </Link>
             </div>
           </motion.div>
           

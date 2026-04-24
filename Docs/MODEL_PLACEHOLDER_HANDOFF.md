@@ -47,7 +47,7 @@ Do not casually rename these fields.
 
 ## What Is Placeholder Right Now
 
-These areas are intentionally temporary until Phase 3 model quality and Phase 8 retraining are done:
+These areas are intentionally temporary until Phase 3 model quality and Phase 8 retraining are fully battle-tested on real traffic:
 
 ### Model confidence realism
 
@@ -74,7 +74,7 @@ The frontend already consumes:
 - `validationF1`
 - `lastRetrainedAt`
 
-If retraining later changes the underlying version file, preserve this response shape.
+The retraining loop now updates the underlying version file, so preserve this response shape when evolving the metadata.
 
 ## Phase 3 Integration Guidance
 
@@ -97,15 +97,15 @@ without changing how the portal or dashboard talk to the backend.
 
 ## Phase 8 Retraining Guidance
 
-When the retraining orchestrator is built:
+Now that the retraining orchestrator exists:
 
-### Inputs it should consume
+### Inputs it consumes
 
 - feedback samples from `feedback-service`
-- model version file
-- existing trained artifact locations
+- `models/model_version.json`
+- existing trained artifact locations in `models/`
 
-### Outputs it must preserve
+### Outputs it preserves
 
 - updated model artifact paths
 - updated `model_version.json`

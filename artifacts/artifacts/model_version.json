@@ -1,0 +1,6 @@
+{
+    "snn_version": "1.0.0",
+    "lnn_version": "1.0.0",
+    "xgboost_version": "1.0.0",
+    "current_model_type": "SNN"
+}

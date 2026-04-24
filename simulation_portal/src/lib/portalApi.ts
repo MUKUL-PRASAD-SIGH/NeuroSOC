@@ -31,7 +31,6 @@ async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
   if (USE_MOCKS) {
     return mockRequestJson<T>(input, init);
   }
-
   const response = await fetch(buildApiUrl(input), {
     credentials: 'include',
     ...init,

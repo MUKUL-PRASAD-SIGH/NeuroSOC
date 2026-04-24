@@ -45,7 +45,7 @@ export default function AlertFeed({ maxItems = null, showHeader = true }) {
   }, [alerts, maxItems]);
 
   return (
-    <section className="soc-glass flex h-full min-h-[360px] flex-col rounded-[28px] p-4 md:p-5">
+    <section className="soc-glass flex h-full min-h-[360px] flex-col p-4 md:p-5">
       {showHeader ? (
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>

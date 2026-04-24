@@ -46,12 +46,13 @@ body::before {
 
 @layer components {
   .soc-shell {
-    @apply mx-auto min-h-screen w-full max-w-[1920px] px-4 pb-8 pt-5 md:px-6 lg:px-8;
+    @apply mx-auto min-h-screen w-full max-w-[2000px] px-4 pb-8 pt-5 md:px-6 lg:px-8;
   }
 
   .soc-glass {
     @apply border border-soc-border/80 bg-soc-panel/70 backdrop-blur-xl;
-    box-shadow: 0 26px 72px rgba(2, 8, 22, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    border-radius: 5px;
+    box-shadow: 0 26px 72px rgba(2, 8, 22, 0), inset 0 1px 0 rgba(255, 255, 255, 0);
   }
 
   .soc-kicker {

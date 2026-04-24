@@ -87,7 +87,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden"
@@ -96,11 +96,10 @@ export default function LoginPage() {
           <h2 className="text-3xl font-display font-bold mb-2">Welcome Back</h2>
           <p className="text-slate-400 text-sm">Secure authorization required to access your account</p>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
-          {/* Honeypot Field */}
-          <input 
-            name="username_confirm" 
+          <input
+            name="username_confirm"
             type="text"
             value={usernameConfirm}
             onChange={(e) => setUsernameConfirm(e.target.value)}
@@ -113,7 +112,7 @@ export default function LoginPage() {
             <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Email Address</label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-              <input 
+              <input
                 type="email"
                 required
                 className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-bank-navy outline-none transition-all"
@@ -128,7 +127,7 @@ export default function LoginPage() {
             <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Password</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-              <input 
+              <input
                 type="password"
                 required
                 className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-bank-navy outline-none transition-all"
@@ -139,7 +138,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <button 
+          <button
             type="submit"
             disabled={isLoading}
             className="w-full bg-bank-navy text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-opacity-95 transition-all shadow-lg shadow-bank-navy/10 disabled:opacity-70"
@@ -152,7 +151,7 @@ export default function LoginPage() {
               {error}
             </div>
           ) : null}
-          
+
           <div className="text-center">
             <button
               type="button"

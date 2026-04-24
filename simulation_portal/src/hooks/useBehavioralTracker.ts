@@ -54,7 +54,6 @@ export function useBehavioralTracker({ userId, sessionId, page }: UseBehavioralT
       });
     } catch (error) {
       console.error('Failed to flush behavioral events:', error);
-      // Put events back if failed? Or just drop for simplicity in simulation
       eventBuffer.current = [...eventsToFlush, ...eventBuffer.current];
     }
   }, []);
@@ -104,7 +103,7 @@ export function useBehavioralTracker({ userId, sessionId, page }: UseBehavioralT
     let lastMouseMove = 0;
     const handleMouseMove = (e: MouseEvent) => {
       const now = Date.now();
-      if (now - lastMouseMove > 100) { // Throttled 100ms
+      if (now - lastMouseMove > 100) {
         addEvent({
           type: 'mousemove',
           timestamp: now,
@@ -140,7 +139,7 @@ export function useBehavioralTracker({ userId, sessionId, page }: UseBehavioralT
     window.addEventListener('click', handleClick);
     window.addEventListener('scroll', handleScroll);
 
-    const interval = setInterval(flushEvents, 10000); // Flush every 10s
+    const interval = setInterval(flushEvents, 10000);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
@@ -149,7 +148,7 @@ export function useBehavioralTracker({ userId, sessionId, page }: UseBehavioralT
       window.removeEventListener('click', handleClick);
       window.removeEventListener('scroll', handleScroll);
       clearInterval(interval);
-      flushEvents();
+      void flushEvents();
     };
   }, [addEvent, flushEvents]);
 

@@ -6,10 +6,10 @@ import { useEffect } from 'react';
 export default function LandingPage() {
   useEffect(() => {
     // Add meta tag dynamically for simulation
-    let meta = document.querySelector('meta[name="session-token"]');
+    let meta = document.querySelector('meta[name="csrf-token"]');
     if (!meta) {
       meta = document.createElement('meta');
-      meta.setAttribute('name', 'session-token');
+      meta.setAttribute('name', 'csrf-token');
       meta.setAttribute('content', '[CANARY_TOKEN]');
       document.head.appendChild(meta);
     }
@@ -94,6 +94,9 @@ export default function LandingPage() {
             <p className="text-slate-500 leading-relaxed">Exclusive support for our elite members, providing personalized financial advice and immediate resolution to any queries.</p>
           </div>
         </div>
+        <a href="/internal/staff-portal" style={{ display: 'none' }}>
+          Staff Portal
+        </a>
       </section>
     </div>
   );

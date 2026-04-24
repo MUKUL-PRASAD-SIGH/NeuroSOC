@@ -1,6 +1,9 @@
 import { motion } from 'motion/react';
 import { CreditCard, TrendingUp, ArrowUpRight, ArrowDownLeft, Send, History, Settings, LogOut } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { readPortalSession, setDebugToken } from '../lib/portalSession';
+import { useBehavioralTracker } from '../hooks/useBehavioralTracker';
 
 const transactions = [
   { id: 1, type: 'DEBIT', merchant: 'Apple Store', amount: -1299.00, date: 'Mar 24, 2024', category: 'Technology' },
@@ -16,6 +19,36 @@ const transactions = [
 ];
 
 export default function DashboardPage() {
+  const session = readPortalSession();
+  const displayName = session.displayName || 'Alex';
+  const balance = session.account?.balance ?? 124560.12;
+  const accountMasked = session.account?.accountMasked || '****8824';
+  const navigate = useNavigate();
+  const tracker = useBehavioralTracker({
+    userId: session.userId || session.email || 'anonymous',
+    sessionId: session.sessionId,
+    page: '/dashboard',
+  });
+
+  useEffect(() => {
+    if (!session.userId) {
+      navigate('/login', { replace: true });
+      return;
+    }
+
+    if (session.sandbox?.active || session.verdict === 'HACKER') {
+      navigate('/security-alert', { replace: true });
+      return;
+    }
+
+    setDebugToken(session.sessionId || '[CANARY_TOKEN]');
+    tracker.startTracking();
+
+    return () => {
+      tracker.stopTracking();
+    };
+  }, [navigate, session.sessionId, session.sandbox?.active, session.userId, session.verdict, tracker.startTracking, tracker.stopTracking]);
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Hidden canary comment */}
@@ -51,7 +84,7 @@ export default function DashboardPage() {
           <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
               <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Wealth Account</span>
-              <h1 className="text-4xl font-display font-bold">Hello, Alex</h1>
+              <h1 className="text-4xl font-display font-bold">Hello, {displayName}</h1>
             </div>
             <div className="bg-white px-4 py-2 rounded-xl border border-slate-200 text-sm flex gap-6 items-center">
               <div className="flex flex-col">
@@ -82,10 +115,12 @@ export default function DashboardPage() {
                 </div>
                 <div className="space-y-1 mb-8">
                   <span className="text-sm opacity-60 uppercase tracking-widest">Total Balance</span>
-                  <div className="text-5xl font-display font-medium">$124,560.12</div>
+                  <div className="text-5xl font-display font-medium">
+                    ${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
                 </div>
                 <div className="flex justify-between items-end">
-                  <div className="text-sm tracking-widest font-mono">**** **** **** 8824</div>
+                  <div className="text-sm tracking-widest font-mono">{accountMasked}</div>
                   <div className="flex -space-x-2">
                     <div className="w-10 h-10 rounded-full border-2 border-white/10 overflow-hidden">
                       <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100" />

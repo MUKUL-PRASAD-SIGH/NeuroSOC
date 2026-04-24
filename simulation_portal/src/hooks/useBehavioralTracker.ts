@@ -1,4 +1,10 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+
+interface UseBehavioralTrackerOptions {
+  userId: string;
+  sessionId?: string;
+  page?: string;
+}
 
 export interface BehavioralEvent {
   type: string;
@@ -11,10 +17,26 @@ export interface BehavioralEvent {
   scrollY?: number;
 }
 
-export function useBehavioralTracker(userId: string) {
+export function useBehavioralTracker({ userId, sessionId, page }: UseBehavioralTrackerOptions) {
   const eventBuffer = useRef<BehavioralEvent[]>([]);
-  const sessionId = useRef(Math.random().toString(36).substring(7));
+  const sessionIdRef = useRef(sessionId || `portal-${Math.random().toString(36).substring(2)}`);
+  const userIdRef = useRef(userId);
+  const pageRef = useRef(page);
   const isTracking = useRef(false);
+
+  useEffect(() => {
+    userIdRef.current = userId || 'anonymous';
+  }, [userId]);
+
+  useEffect(() => {
+    if (sessionId) {
+      sessionIdRef.current = sessionId;
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    pageRef.current = page;
+  }, [page]);
 
   const flushEvents = useCallback(async () => {
     if (eventBuffer.current.length === 0) return;
@@ -27,9 +49,10 @@ export function useBehavioralTracker(userId: string) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: userId,
-          session_id: sessionId.current,
+          user_id: userIdRef.current,
+          session_id: sessionIdRef.current,
           events: eventsToFlush,
+          page: pageRef.current,
         }),
       });
     } catch (error) {
@@ -37,7 +60,7 @@ export function useBehavioralTracker(userId: string) {
       // Put events back if failed? Or just drop for simplicity in simulation
       eventBuffer.current = [...eventsToFlush, ...eventBuffer.current];
     }
-  }, [userId]);
+  }, []);
 
   const addEvent = useCallback((event: BehavioralEvent) => {
     if (!isTracking.current) return;
@@ -46,11 +69,18 @@ export function useBehavioralTracker(userId: string) {
 
   const startTracking = useCallback(() => {
     isTracking.current = true;
+    if (pageRef.current) {
+      eventBuffer.current.push({
+        type: 'pagevisit',
+        timestamp: Date.now(),
+        target: pageRef.current,
+      });
+    }
   }, []);
 
   const stopTracking = useCallback(() => {
     isTracking.current = false;
-    flushEvents();
+    void flushEvents();
   }, [flushEvents]);
 
   useEffect(() => {
@@ -127,8 +157,9 @@ export function useBehavioralTracker(userId: string) {
   }, [addEvent, flushEvents]);
 
   return {
-    sessionId: sessionId.current,
+    sessionId: sessionIdRef.current,
     eventCount: eventBuffer.current.length,
+    flushEvents,
     startTracking,
     stopTracking
   };

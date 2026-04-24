@@ -200,7 +200,7 @@ export default function ThreatMap({ compact = true }) {
 
   return (
     <section
-      className={`soc-glass pointer-events-auto overflow-hidden rounded-[26px] p-4 md:p-5 ${
+      className={`soc-glass pointer-events-auto overflow-hidden p-4 md:p-5 ${
         compact ? "h-[300px] w-full max-w-[360px] md:h-[320px]" : "min-h-[720px]"
       }`}
     >

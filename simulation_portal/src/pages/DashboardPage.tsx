@@ -1,21 +1,46 @@
 import { motion } from 'motion/react';
 import { CreditCard, TrendingUp, ArrowUpRight, ArrowDownLeft, Send, History, Settings, LogOut } from 'lucide-react';
-import { Link } from 'react-router-dom';
-
-const transactions = [
-  { id: 1, type: 'DEBIT', merchant: 'Apple Store', amount: -1299.00, date: 'Mar 24, 2024', category: 'Technology' },
-  { id: 2, type: 'CREDIT', merchant: 'Remote Work Corp', amount: 4500.00, date: 'Mar 22, 2024', category: 'Income' },
-  { id: 3, type: 'DEBIT', merchant: 'Whole Foods Market', amount: -156.42, date: 'Mar 21, 2024', category: 'Groceries' },
-  { id: 4, type: 'DEBIT', merchant: 'Stripe / SaaS Billing', amount: -49.00, date: 'Mar 20, 2024', category: 'Business' },
-  { id: 5, type: 'DEBIT', merchant: 'Equinox Gym', amount: -260.00, date: 'Mar 18, 2024', category: 'Wellness' },
-  { id: 6, type: 'CREDIT', merchant: 'Stock Dividend', amount: 124.50, date: 'Mar 15, 2024', category: 'Investment' },
-  { id: 7, type: 'DEBIT', merchant: 'Uber Trip', amount: -32.18, date: 'Mar 14, 2024', category: 'Transport' },
-  { id: 8, type: 'DEBIT', merchant: 'Starbucks Coffee', amount: -6.45, date: 'Mar 13, 2024', category: 'Dining' },
-  { id: 9, type: 'DEBIT', merchant: 'Amazon.com', amount: -89.99, date: 'Mar 12, 2024', category: 'Shopping' },
-  { id: 10, type: 'DEBIT', merchant: 'Netflix Subscription', amount: -19.99, date: 'Mar 10, 2024', category: 'Entertainment' },
-];
+import { Link, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { readPortalSession, setDebugToken } from '../lib/portalSession';
+import { useBehavioralTracker } from '../hooks/useBehavioralTracker';
+import { getMockDashboardData } from '../lib/portalMock';
 
 export default function DashboardPage() {
+  const session = readPortalSession();
+  const dashboardData = getMockDashboardData(session.userId || session.email);
+  const displayName = session.displayName || dashboardData.displayName;
+  const balance = session.account?.balance ?? dashboardData.account.balance;
+  const accountMasked = session.account?.accountMasked || dashboardData.account.accountMasked;
+  const income = session.account?.income ?? dashboardData.account.income;
+  const expenses = session.account?.expenses ?? dashboardData.account.expenses;
+  const transactions = dashboardData.transactions;
+  const navigate = useNavigate();
+  const tracker = useBehavioralTracker({
+    userId: session.userId || session.email || 'anonymous',
+    sessionId: session.sessionId,
+    page: '/dashboard',
+  });
+
+  useEffect(() => {
+    if (!session.userId) {
+      navigate('/login', { replace: true });
+      return;
+    }
+
+    if (session.sandbox?.active || session.verdict === 'HACKER') {
+      navigate('/security-alert', { replace: true });
+      return;
+    }
+
+    setDebugToken(session.sessionId || '[CANARY_TOKEN]');
+    tracker.startTracking();
+
+    return () => {
+      tracker.stopTracking();
+    };
+  }, [navigate, session.sessionId, session.sandbox?.active, session.userId, session.verdict, tracker.startTracking, tracker.stopTracking]);
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Hidden canary comment */}
@@ -33,13 +58,13 @@ export default function DashboardPage() {
           <Link to="/dashboard" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl transition-all">
             <History className="w-5 h-5" /> Transactions
           </Link>
-          <Link to="/dashboard" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl transition-all">
+          <Link to="/verdict" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl transition-all">
             <Settings className="w-5 h-5" /> Settings
           </Link>
         </div>
         
         <div className="mt-auto">
-          <Link to="/" className="flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl transition-all font-semibold">
+          <Link to="/" onClick={() => window.localStorage.removeItem('novatrust.portal.session')} className="flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl transition-all font-semibold">
             <LogOut className="w-5 h-5" /> Logout
           </Link>
         </div>
@@ -51,7 +76,7 @@ export default function DashboardPage() {
           <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
               <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Wealth Account</span>
-              <h1 className="text-4xl font-display font-bold">Hello, Alex</h1>
+              <h1 className="text-4xl font-display font-bold">Hello, {displayName}</h1>
             </div>
             <div className="bg-white px-4 py-2 rounded-xl border border-slate-200 text-sm flex gap-6 items-center">
               <div className="flex flex-col">
@@ -61,8 +86,8 @@ export default function DashboardPage() {
                 </span>
               </div>
               <div className="flex flex-col border-l border-slate-100 pl-6">
-                <span className="text-[10px] uppercase font-bold text-slate-400">Last login</span>
-                <span className="font-semibold">Today, 08:42 AM</span>
+                <span className="text-[10px] uppercase font-bold text-slate-400">Profile</span>
+                <span className="font-semibold">{dashboardData.role}</span>
               </div>
             </div>
           </header>
@@ -82,10 +107,12 @@ export default function DashboardPage() {
                 </div>
                 <div className="space-y-1 mb-8">
                   <span className="text-sm opacity-60 uppercase tracking-widest">Total Balance</span>
-                  <div className="text-5xl font-display font-medium">$124,560.12</div>
+                  <div className="text-5xl font-display font-medium">
+                    ${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
                 </div>
                 <div className="flex justify-between items-end">
-                  <div className="text-sm tracking-widest font-mono">**** **** **** 8824</div>
+                  <div className="text-sm tracking-widest font-mono">{accountMasked}</div>
                   <div className="flex -space-x-2">
                     <div className="w-10 h-10 rounded-full border-2 border-white/10 overflow-hidden">
                       <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100" />
@@ -108,7 +135,7 @@ export default function DashboardPage() {
                   <span className="text-[10px] font-bold text-green-600 uppercase">This Month</span>
                 </div>
                 <h4 className="text-xs font-bold text-slate-400 uppercase mb-1">Total Income</h4>
-                <div className="text-2xl font-bold">+$8,420.00</div>
+                <div className="text-2xl font-bold">+${income.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               </div>
               <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
                 <div className="flex justify-between items-center mb-4">
@@ -118,7 +145,7 @@ export default function DashboardPage() {
                   <span className="text-[10px] font-bold text-red-600 uppercase">This Month</span>
                 </div>
                 <h4 className="text-xs font-bold text-slate-400 uppercase mb-1">Total Expenses</h4>
-                <div className="text-2xl font-bold">-$4,128.50</div>
+                <div className="text-2xl font-bold">-${expenses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               </div>
             </div>
           </div>
@@ -126,7 +153,7 @@ export default function DashboardPage() {
           <section className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-display font-bold">Recent Transactions</h2>
-              <button className="text-sm font-semibold text-bank-accent hover:underline">View All</button>
+              <button onClick={() => navigate('/verdict')} className="text-sm font-semibold text-bank-accent hover:underline">View All</button>
             </div>
             
             <div className="space-y-4">

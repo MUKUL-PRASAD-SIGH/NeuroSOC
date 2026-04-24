@@ -5,8 +5,11 @@ import DashboardPage from './pages/DashboardPage';
 import TransferPage from './pages/TransferPage';
 import SecurityAlertPage from './pages/SecurityAlertPage';
 import VerdictDisplayPage from './pages/VerdictDisplayPage';
+import { clearPortalSession, readPortalSession } from './lib/portalSession';
 
 function TopNav() {
+    const session = readPortalSession();
+
     return (
         <header className="h-[72px] bg-bank-navy text-white border-b border-white/10 sticky top-0 z-50">
             <div className="max-w-7xl mx-auto h-full px-6 flex items-center justify-between">
@@ -18,6 +21,13 @@ function TopNav() {
                     <Link to="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
                     <Link to="/transfer" className="hover:text-white transition-colors">Transfer</Link>
                     <Link to="/verdict" className="hover:text-white transition-colors">Verdict</Link>
+                    <Link
+                        to="/"
+                        className="hover:text-white transition-colors"
+                        onClick={() => clearPortalSession()}
+                    >
+                        {session.userId ? 'Logout' : 'Reset'}
+                    </Link>
                 </nav>
             </div>
         </header>

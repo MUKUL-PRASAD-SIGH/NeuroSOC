@@ -3,7 +3,7 @@ import { useDashboardStore } from "../store/dashboardStore";
 
 function StatCard({ label, value, accent }) {
   return (
-    <article className="soc-glass group relative overflow-hidden rounded-[22px] px-4 py-4 transition-all duration-300 hover:border-soc-electric/45">
+    <article className="soc-glass group relative overflow-hidden px-4 py-4 transition-all duration-300 hover:border-soc-electric/45">
       <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent opacity-40" />
       <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-soc-muted">{label}</p>
       <p className={`mt-3 text-3xl font-semibold leading-none ${accent}`}>{value}</p>

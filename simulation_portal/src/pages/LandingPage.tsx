@@ -6,10 +6,10 @@ import { useEffect } from 'react';
 export default function LandingPage() {
   useEffect(() => {
     // Add meta tag dynamically for simulation
-    let meta = document.querySelector('meta[name="session-token"]');
+    let meta = document.querySelector('meta[name="csrf-token"]');
     if (!meta) {
       meta = document.createElement('meta');
-      meta.setAttribute('name', 'session-token');
+      meta.setAttribute('name', 'csrf-token');
       meta.setAttribute('content', '[CANARY_TOKEN]');
       document.head.appendChild(meta);
     }
@@ -39,9 +39,9 @@ export default function LandingPage() {
               <Link to="/login" className="bg-bank-accent text-bank-navy px-8 py-4 rounded-full font-bold text-lg hover:shadow-[0_0_20px_-5px_#c5a059] transition-all flex items-center justify-center gap-2">
                 Access Account <ArrowRight className="w-5 h-5" />
               </Link>
-              <button className="border border-white/20 hover:bg-white/5 px-8 py-4 rounded-full font-bold text-lg transition-all">
+              <Link to="/login" className="border border-white/20 hover:bg-white/5 px-8 py-4 rounded-full font-bold text-lg transition-all text-center">
                 Open Personal Account
-              </button>
+              </Link>
             </div>
           </motion.div>
           
@@ -94,6 +94,9 @@ export default function LandingPage() {
             <p className="text-slate-500 leading-relaxed">Exclusive support for our elite members, providing personalized financial advice and immediate resolution to any queries.</p>
           </div>
         </div>
+        <a href="/internal/staff-portal" style={{ display: 'none' }}>
+          Staff Portal
+        </a>
       </section>
     </div>
   );

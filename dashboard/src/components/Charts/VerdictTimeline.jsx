@@ -16,7 +16,7 @@ const SERIES = [
 
 export default function VerdictTimeline({ data }) {
   return (
-    <section className="soc-glass rounded-[28px] p-4 md:p-5">
+    <section className="soc-glass p-4 md:p-5">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <p className="soc-kicker">Verdict Timeline</p>

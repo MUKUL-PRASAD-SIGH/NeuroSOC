@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Shield, BrainCircuit, Activity, ChevronRight, AlertTriangle, CheckCircle } from 'lucide-react';
+import { apiJson } from '../lib/apiClient';
 
 export default function VerdictDisplayPage() {
   const [data, setData] = useState<any>(null);
@@ -9,8 +10,7 @@ export default function VerdictDisplayPage() {
   useEffect(() => {
     const poll = async () => {
       try {
-        const res = await fetch('/api/verdicts/current');
-        const json = await res.json();
+        const json = await apiJson<any>('/api/verdicts/current');
         setData(json);
         setHistory(prev => [json, ...prev.slice(0, 9)]);
       } catch (e) {
@@ -30,7 +30,7 @@ export default function VerdictDisplayPage() {
   };
 
   const getBgColor = (verdict: string) => {
-    if (verdict === 'TRUSTED') return 'bg-green-500/10 border-green-500/20';
+    if (verdict === 'TRUSTED' || verdict === 'LEGITIMATE') return 'bg-green-500/10 border-green-500/20';
     if (verdict === 'HACKER') return 'bg-red-500/10 border-red-500/20';
     return 'bg-amber-500/10 border-amber-500/20';
   };

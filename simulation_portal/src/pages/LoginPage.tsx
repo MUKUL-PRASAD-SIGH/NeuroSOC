@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useBehavioralTracker } from '../hooks/useBehavioralTracker';
 import { Lock, Mail, Loader2 } from 'lucide-react';
+import { apiJson } from '../lib/apiClient';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -23,10 +24,9 @@ export default function LoginPage() {
 
     // 1. Honeypot check
     if (confirmEmail) {
-      await fetch('/api/bank/honeypot-hit', {
+      await apiJson<{ status: string }>('/api/bank/honeypot-hit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source: 'login_form' })
+        body: JSON.stringify({ user_id: email || 'anonymous', source: 'login_form' })
       });
       // Just wait a bit to simulate processing even for bots
       await new Promise(r => setTimeout(r, 1000));
@@ -37,16 +37,13 @@ export default function LoginPage() {
 
     try {
       // 3. Login attempt
-      const loginRes = await fetch('/api/bank/login', {
+      const loginData = await apiJson<{ user_id: string; verdict: string }>('/api/bank/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-      const loginData = await loginRes.json();
 
       // 4. Verdict check
-      const verdictRes = await fetch(`/api/verdicts/${loginData.user_id}`);
-      const verdictData = await verdictRes.json();
+      const verdictData = await apiJson<{ verdict: string }>(`/api/verdicts/${loginData.user_id}`);
 
       if (verdictData.verdict === 'HACKER') {
         navigate('/security-alert');

@@ -2,6 +2,7 @@ import { useState, FormEvent } from 'react';
 import { motion } from 'motion/react';
 import { Send, AlertCircle, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { apiJson } from '../lib/apiClient';
 
 export default function TransferPage() {
   const [recipient, setRecipient] = useState('');
@@ -18,9 +19,8 @@ export default function TransferPage() {
 
     // 1. Honeypot check
     if (confirmRouting) {
-      await fetch('/api/bank/honeypot-hit', {
+      await apiJson<{ status: string }>('/api/bank/honeypot-hit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ source: 'transfer_form' })
       });
       // Silent fail for bots
@@ -30,20 +30,40 @@ export default function TransferPage() {
     // 2. SQL Injection detection
     const sqlKeywords = [" OR ", "--", "';"];
     if (sqlKeywords.some(keyword => memo.toUpperCase().includes(keyword))) {
-      await fetch('/api/bank/web-attack-detected', {
+      await apiJson<{ status: string }>('/api/bank/web-attack-detected', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ attack_type: 'SQLI', payload: memo })
       });
       navigate('/security-alert');
       return;
     }
 
-    // Process normal transfer (mock)
-    if (parseFloat(amount) > 0) {
+    const numericAmount = parseFloat(amount);
+    if (numericAmount <= 0) {
+      setIsError(true);
+      return;
+    }
+
+    try {
+      const response = await apiJson<{ verdict: string }>('/api/bank/transfer', {
+        method: 'POST',
+        body: JSON.stringify({
+          user_id: 'portal-user',
+          recipient,
+          amount: numericAmount,
+          memo,
+        }),
+      });
+
+      if (response.verdict === 'HACKER') {
+        navigate('/security-alert');
+        return;
+      }
+
       setIsSuccess(true);
       setTimeout(() => navigate('/dashboard'), 2000);
-    } else {
+    } catch (error) {
+      console.error('Transfer failed:', error);
       setIsError(true);
     }
   };

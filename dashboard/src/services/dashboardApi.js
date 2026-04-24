@@ -8,6 +8,8 @@ import {
 
 const MAX_ALERTS = 50;
 const DEV_MOCK_STREAM_INTERVAL_MS = 6000;
+const DEV_MOCK_ENABLED =
+  import.meta.env.DEV && String(import.meta.env.VITE_ENABLE_MSW || "false").toLowerCase() === "true";
 
 function normalizeAlert(alert) {
   return {
@@ -50,7 +52,7 @@ export async function getAlerts() {
 }
 
 export function subscribeToAlerts({ onMessage, onStatusChange, onError }) {
-  if (!getApiBaseUrl() && import.meta.env.DEV) {
+  if (DEV_MOCK_ENABLED) {
     onStatusChange?.("connected");
 
     const intervalId = window.setInterval(() => {

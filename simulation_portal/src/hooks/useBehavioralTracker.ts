@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { apiJson } from '../lib/apiClient';
 
 export interface BehavioralEvent {
   type: string;
@@ -23,9 +24,8 @@ export function useBehavioralTracker(userId: string) {
     eventBuffer.current = [];
 
     try {
-      await fetch('/api/behavioral', {
+      await apiJson<{ status: string }>('/api/behavioral', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: userId,
           session_id: sessionId.current,

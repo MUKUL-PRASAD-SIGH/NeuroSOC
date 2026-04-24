@@ -1,22 +1,20 @@
-FROM node:20-bullseye AS build
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
+ARG VITE_API_URL=http://localhost:8000
+ARG VITE_ENABLE_MSW=false
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_ENABLE_MSW=${VITE_ENABLE_MSW}
+
 COPY package*.json ./
-
-FROM node:20-alpine
-
-WORKDIR /app
-
-COPY package*.json ./
-
-# Alpine uses apk (THIS is where apk is correct)
-RUN apk add --no-cache python3 make g++
-
 RUN npm install --legacy-peer-deps
 
 COPY . .
+RUN npm run build
 
-EXPOSE 3000
+FROM nginx:alpine
 
-CMD ["npm", "start"]
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

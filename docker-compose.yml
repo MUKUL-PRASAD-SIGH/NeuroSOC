@@ -213,7 +213,7 @@ services:
     environment:
       KAFKA_BOOTSTRAP: kafka:9092
       DATABASE_URL: postgresql://ns_user:ns_pass@postgres:5432/neuroshield
-      RETRAIN_MIN_FEEDBACK_SAMPLES: "5"
+      RETRAIN_MIN_FEEDBACK_SAMPLES: "3"
       RETRAIN_INTERVAL_SECONDS: "30"
       MODEL_VERSION_FILE: /models/model_version.json
       RETRAIN_STATE_FILE: /models/retraining_state.json

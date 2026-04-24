@@ -156,7 +156,6 @@ Real now:
 Still placeholder by design:
 
 - trained model quality
-- final model artifact swap behavior for future retraining
 - real production geolocation guarantees
 - production auth hardening
 

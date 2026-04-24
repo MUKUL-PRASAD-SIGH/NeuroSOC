@@ -19,6 +19,7 @@ except ImportError:  # pragma: no cover - optional in local smoke environments
 
 from core.behavioral.profiler import BehavioralProfiler
 from core.behavioral.signals import extract_session_vector
+from core.legacy_models import LegacyLSTMClassifier, LegacyMLPClassifier, LegacyXGBoostClassifier
 from core.lnn.classifier import LNNClassifier
 from core.lnn.reservoir import LiquidReservoir
 from core.snn.encoder import SpikeEncoder
@@ -192,8 +193,10 @@ class DecisionEngine:
             return anchored_to_repo
         return None
 
-    def _load_snn_bundle(self, checkpoint_path: Path) -> tuple[SpikeEncoder, SNNAnomalyDetector]:
+    def _load_snn_bundle(self, checkpoint_path: Path) -> tuple[SpikeEncoder | None, Any]:
         checkpoint = torch.load(checkpoint_path, map_location=self.device)
+        if isinstance(checkpoint, dict) and {"fc1.weight", "fc2.weight", "fc3.weight"}.issubset(checkpoint.keys()):
+            return None, LegacyMLPClassifier.from_state_dict(checkpoint, checkpoint_path.parent, self.feature_names)
         config = checkpoint.get("config", {})
         input_size = int(config.get("input_size", 400))
         n_features = int(config.get("n_features", len(self.feature_names)))
@@ -212,8 +215,10 @@ class DecisionEngine:
         model.eval()
         return encoder, model
 
-    def _load_lnn_bundle(self, checkpoint_path: Path) -> tuple[LiquidReservoir, LNNClassifier, int]:
+    def _load_lnn_bundle(self, checkpoint_path: Path) -> tuple[LiquidReservoir | None, Any, int]:
         checkpoint = torch.load(checkpoint_path, map_location=self.device)
+        if isinstance(checkpoint, dict) and {"lstm.weight_ih_l0", "lstm.weight_hh_l0", "fc.weight"}.issubset(checkpoint.keys()):
+            return None, LegacyLSTMClassifier.from_state_dict(checkpoint, checkpoint_path.parent, self.feature_names), 20
         reservoir_config = dict(checkpoint["reservoir_config"])
         classifier_config = dict(checkpoint["classifier_config"])
         feature_names = reservoir_config.get("feature_names")
@@ -238,7 +243,11 @@ class DecisionEngine:
         window_size = int(reservoir_config.get("window_size", 20))
         return reservoir, classifier, window_size
 
-    def _load_xgb_bundle(self, checkpoint_path: Path) -> XGBoostClassifier:
+    def _load_xgb_bundle(self, checkpoint_path: Path) -> Any:
+        metadata_path = checkpoint_path.with_suffix(checkpoint_path.suffix + ".meta.json")
+        legacy_label_encoder = checkpoint_path.parent / "label_encoder.pkl"
+        if not metadata_path.exists() and legacy_label_encoder.exists():
+            return LegacyXGBoostClassifier.from_artifacts(checkpoint_path, checkpoint_path.parent, self.feature_names)
         wrapper = XGBoostClassifier(feature_names=self.feature_names)
         wrapper.load(checkpoint_path)
         return wrapper
@@ -271,8 +280,17 @@ class DecisionEngine:
             feature_map["sql_injection_detected"] = bool(session_data.get("sql_injection_detected") or False)
         return feature_map
 
-    def _build_session_sequence(self, feature_vector: np.ndarray, session_data: dict[str, Any]) -> np.ndarray:
-        sequence = session_data.get("session_sequence") or session_data.get("flow_sequence")
+    def _build_session_sequence(
+        self,
+        feature_vector: np.ndarray,
+        session_data: dict[str, Any],
+        *,
+        raw: bool = False,
+    ) -> np.ndarray:
+        if raw:
+            sequence = session_data.get("raw_session_sequence") or session_data.get("raw_flow_sequence")
+        else:
+            sequence = session_data.get("session_sequence") or session_data.get("flow_sequence")
         if sequence is None:
             return np.repeat(feature_vector.reshape(1, -1), self.lnn_window_size, axis=0)
         array = np.asarray(sequence, dtype=np.float32)
@@ -322,7 +340,17 @@ class DecisionEngine:
         ) + 1e-3
         return raw / raw.sum()
 
-    def _run_snn(self, feature_vector: np.ndarray, features_dict: dict[str, Any]) -> float:
+    def _run_snn(
+        self,
+        feature_vector: np.ndarray,
+        raw_feature_vector: np.ndarray | None,
+        features_dict: dict[str, Any],
+    ) -> float:
+        if isinstance(self.snn_model, LegacyMLPClassifier):
+            model_input = raw_feature_vector if raw_feature_vector is not None else feature_vector
+            score = self.snn_model.anomaly_score(model_input, apply_scaler=raw_feature_vector is not None)
+            return float(np.asarray(score).reshape(-1)[0])
+
         if self.snn_model is not None and hasattr(self.snn_model, "anomaly_score"):
             score = self.snn_model.anomaly_score(feature_vector.reshape(1, -1))
             return float(np.asarray(score).reshape(-1)[0])
@@ -337,13 +365,28 @@ class DecisionEngine:
         heuristic_probs = self._heuristic_class_probabilities(features_dict)
         return float(1.0 - heuristic_probs[0])
 
-    def _run_lnn(self, feature_vector: np.ndarray, session_data: dict[str, Any], features_dict: dict[str, Any]) -> tuple[str, float]:
+    def _run_lnn(
+        self,
+        feature_vector: np.ndarray,
+        raw_feature_vector: np.ndarray | None,
+        session_data: dict[str, Any],
+        features_dict: dict[str, Any],
+    ) -> tuple[str, float]:
         if self.lnn_reservoir is not None and self.lnn_classifier is not None:
             sequence = self._build_session_sequence(feature_vector, session_data)
             tensor = torch.tensor(sequence, dtype=torch.float32, device=self.device).unsqueeze(1)
             with torch.no_grad():
                 states, _ = self.lnn_reservoir(tensor)
                 probs = self.lnn_classifier.predict_proba(states).detach().cpu().numpy()[0]
+            return self._label_and_threat_confidence(probs)
+
+        if isinstance(self.lnn_classifier, LegacyLSTMClassifier):
+            model_vector = raw_feature_vector if raw_feature_vector is not None else feature_vector
+            sequence = self._build_session_sequence(model_vector, session_data, raw=raw_feature_vector is not None)
+            probs = np.asarray(
+                self.lnn_classifier.predict_proba(sequence, apply_scaler=raw_feature_vector is not None),
+                dtype=np.float32,
+            ).reshape(-1)
             return self._label_and_threat_confidence(probs)
 
         if self.lnn_classifier is not None and hasattr(self.lnn_classifier, "predict_proba"):
@@ -354,14 +397,26 @@ class DecisionEngine:
         heuristic_probs = self._heuristic_class_probabilities(features_dict)
         return self._label_and_threat_confidence(heuristic_probs)
 
-    def _run_xgb(self, feature_vector: np.ndarray, features_dict: dict[str, Any]) -> tuple[str, float]:
+    def _run_xgb(
+        self,
+        feature_vector: np.ndarray,
+        raw_feature_vector: np.ndarray | None,
+        features_dict: dict[str, Any],
+    ) -> tuple[str, float]:
         probabilities: np.ndarray | None = None
         predicted_label = "BENIGN"
         threat_confidence = 0.0
 
         if self.xgb_model is not None:
             try:
-                if hasattr(self.xgb_model, "predict_proba"):
+                if isinstance(self.xgb_model, LegacyXGBoostClassifier):
+                    model_input = raw_feature_vector if raw_feature_vector is not None else feature_vector
+                    probabilities = np.asarray(
+                        self.xgb_model.predict_proba(model_input, apply_scaler=raw_feature_vector is not None),
+                        dtype=np.float32,
+                    )[0]
+                    predicted_label, threat_confidence = self._label_and_threat_confidence(probabilities)
+                elif hasattr(self.xgb_model, "predict_proba"):
                     probabilities = np.asarray(
                         self.xgb_model.predict_proba(feature_vector.reshape(1, -1)),
                         dtype=np.float32,
@@ -442,11 +497,16 @@ class DecisionEngine:
                 feature_vector = self._coerce_feature_vector(
                     session_data.get("flow_features", session_data.get("features"))
                 )
-                features_dict = self._build_features_dict(feature_vector, session_data)
+                raw_feature_vector = None
+                raw_features = session_data.get("raw_flow_features", session_data.get("raw_features"))
+                if raw_features is not None:
+                    raw_feature_vector = self._coerce_feature_vector(raw_features)
+                features_source = raw_feature_vector if raw_feature_vector is not None else feature_vector
+                features_dict = self._build_features_dict(features_source, session_data)
                 behavioral_vector = self._extract_behavioral_vector(session_data)
-                snn_score = self._run_snn(feature_vector, features_dict)
-                lnn_class, lnn_confidence = self._run_lnn(feature_vector, session_data, features_dict)
-                xgb_class, xgb_confidence = self._run_xgb(feature_vector, features_dict)
+                snn_score = self._run_snn(feature_vector, raw_feature_vector, features_dict)
+                lnn_class, lnn_confidence = self._run_lnn(feature_vector, raw_feature_vector, session_data, features_dict)
+                xgb_class, xgb_confidence = self._run_xgb(feature_vector, raw_feature_vector, features_dict)
                 behavioral_delta = self.behavioral_profiler.compute_delta(user_id, behavioral_vector)
                 confidence = self._fuse_confidence(snn_score, lnn_confidence, xgb_confidence, behavioral_delta)
                 verdict = self._derive_verdict(confidence, behavioral_delta)

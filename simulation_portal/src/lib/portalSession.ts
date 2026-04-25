@@ -1,6 +1,10 @@
 export interface PortalAccount {
   balance?: number;
   accountMasked?: string;
+  income?: number;
+  expenses?: number;
+  creditScore?: number;
+  savingsGoal?: number;
 }
 
 export interface PortalSandbox {

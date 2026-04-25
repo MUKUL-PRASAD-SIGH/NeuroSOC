@@ -21,12 +21,17 @@ export interface BankTransferPayload {
 }
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const USE_MOCKS = !API_BASE_URL || import.meta.env.VITE_USE_MOCKS === 'true';
 
 export function buildApiUrl(path: string) {
   return API_BASE_URL ? `${API_BASE_URL}${path}` : path;
 }
 
 async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
+  if (USE_MOCKS) {
+    return mockRequestJson<T>(input, init);
+  }
+
   const response = await fetch(buildApiUrl(input), {
     credentials: 'include',
     ...init,
@@ -45,6 +50,72 @@ async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
     throw new Error(message);
   }
   return data as T;
+}
+
+async function mockRequestJson<T>(input: string, init?: RequestInit): Promise<T> {
+  const {
+    mockCurrentVerdict,
+    mockHoneypotHit,
+    mockLoginBank,
+    mockPostBehavioral,
+    mockSandboxReplay,
+    mockTransferBank,
+    mockUserVerdict,
+    mockWebAttack,
+  } = await import('./portalMock');
+  const body = init?.body ? JSON.parse(String(init.body)) : {};
+
+  if (input === '/api/behavioral') {
+    return mockPostBehavioral({
+      userId: body.user_id,
+      sessionId: body.session_id,
+      events: body.events || [],
+      page: body.page,
+    }) as Promise<T>;
+  }
+
+  if (input === '/api/bank/login') {
+    return mockLoginBank({
+      email: body.email,
+      password: body.password,
+      sessionId: body.session_id,
+    }) as Promise<T>;
+  }
+
+  if (input === '/api/bank/transfer') {
+    return mockTransferBank({
+      userId: body.user_id,
+      sessionId: body.session_id,
+      destination: body.destination,
+      amount: body.amount,
+      memo: body.memo,
+      confirmRoutingNumber: body.confirm_routing_number,
+    }) as Promise<T>;
+  }
+
+  if (input === '/api/bank/honeypot-hit') {
+    return mockHoneypotHit(body.source, body.user_id, body.session_id) as Promise<T>;
+  }
+
+  if (input === '/api/bank/web-attack-detected') {
+    return mockWebAttack(body.user_id, body.session_id, body.payload) as Promise<T>;
+  }
+
+  if (input === '/api/verdicts/current') {
+    return mockCurrentVerdict() as Promise<T>;
+  }
+
+  const userVerdictMatch = input.match(/^\/api\/verdicts\/([^/]+)$/);
+  if (userVerdictMatch) {
+    return mockUserVerdict(decodeURIComponent(userVerdictMatch[1])) as Promise<T>;
+  }
+
+  const replayMatch = input.match(/^\/api\/sandbox\/([^/]+)\/replay$/);
+  if (replayMatch) {
+    return mockSandboxReplay(decodeURIComponent(replayMatch[1])) as Promise<T>;
+  }
+
+  throw new Error(`No mock handler registered for ${input}`);
 }
 
 export function postBehavioral(payload: BehavioralPayload) {

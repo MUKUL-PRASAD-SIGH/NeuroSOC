@@ -24,7 +24,7 @@ export default function UserProfileModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="soc-glass max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-[28px] p-5 md:p-6">
+      <div className="soc-glass max-h-[92vh] w-full max-w-5xl overflow-y-auto p-5 md:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="soc-kicker">User Profile</p>

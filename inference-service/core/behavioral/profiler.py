@@ -27,6 +27,28 @@ SERVICE_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+def _default_storage_dir() -> Path:
+    configured = os.getenv("BEHAVIOR_PROFILE_DIR")
+    if configured:
+        return Path(configured).expanduser()
+
+    candidates = [
+        REPO_ROOT / "data" / "behavioral_profiles",
+        SERVICE_ROOT / "data" / "behavioral_profiles",
+        Path.cwd() / "data" / "behavioral_profiles",
+    ]
+    if os.name != "nt":
+        candidates.insert(0, Path("/data/behavioral_profiles"))
+
+    for candidate in candidates:
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            return candidate
+        except OSError:
+            continue
+    return Path.cwd() / "behavioral_profiles"
+
+
 @dataclass
 class UserProfile:
     user_id: str
@@ -66,20 +88,7 @@ class BehavioralProfiler:
         alpha: float = 0.1,
     ) -> None:
         self.database_url = database_url or os.getenv("DATABASE_URL")
-        default_storage = next(
-            (
-                candidate
-                for candidate in (
-                    Path(os.getenv("BEHAVIOR_PROFILE_DIR")).expanduser() if os.getenv("BEHAVIOR_PROFILE_DIR") else None,
-                    Path("/data/behavioral_profiles"),
-                    REPO_ROOT / "data" / "behavioral_profiles",
-                    SERVICE_ROOT / "data" / "behavioral_profiles",
-                    Path.cwd() / "data" / "behavioral_profiles",
-                )
-                if candidate is not None
-            ),
-            Path.cwd() / "behavioral_profiles",
-        )
+        default_storage = _default_storage_dir()
         self.storage_dir = Path(storage_dir) if storage_dir else default_storage
         self.storage_dir.mkdir(parents=True, exist_ok=True)
         self.alpha = alpha

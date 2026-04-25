@@ -1,6 +1,8 @@
 networks:
   neuroshield-net:
     driver: bridge
+  sandbox-net:
+    driver: bridge
 
 volumes:
   postgres_data:
@@ -24,7 +26,9 @@ services:
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: neuroshield-kafka
-    networks: [neuroshield-net]
+    networks:
+      - neuroshield-net
+      - sandbox-net
     ports:
       - "9092:9092"
       - "29092:29092"
@@ -52,7 +56,9 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: neuroshield-postgres
-    networks: [neuroshield-net]
+    networks:
+      - neuroshield-net
+      - sandbox-net
     ports:
       - "55432:5432"
     environment:
@@ -122,7 +128,9 @@ services:
   inference:
     build: ./inference-service
     container_name: neuroshield-inference
-    networks: [neuroshield-net]
+    networks:
+      - neuroshield-net
+      - sandbox-net
     ports:
       - "8000:8000"
     depends_on:
@@ -142,19 +150,27 @@ services:
       MODEL_PATH: /models
       FEATURE_COLUMNS_PATH: /data/feature_columns.txt
       SANDBOX_CONFIDENCE_THRESHOLD: "0.50"
+      SANDBOX_BASE_URL: http://sandbox:8001
     restart: unless-stopped
 
   sandbox:
     build: ./sandbox-service
     container_name: neuroshield-sandbox
     profiles: ["phase10plus"]
-    networks: [neuroshield-net]
+    networks:
+      - sandbox-net
     ports:
       - "8001:8001"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    pids_limit: 128
     environment:
       KAFKA_BOOTSTRAP: kafka:9092
       DATABASE_URL: postgresql://ns_user:ns_pass@postgres:5432/neuroshield
@@ -180,12 +196,16 @@ services:
     restart: unless-stopped
 
   retraining:
-    build: ./retraining-service
+    build:
+      context: .
+      dockerfile: retraining-service/Dockerfile
     container_name: neuroshield-retraining
     profiles: ["phase8plus"]
     networks: [neuroshield-net]
     depends_on:
       kafka:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     volumes:
       - ./data:/data
@@ -193,7 +213,11 @@ services:
     environment:
       KAFKA_BOOTSTRAP: kafka:9092
       DATABASE_URL: postgresql://ns_user:ns_pass@postgres:5432/neuroshield
-      RETRAIN_BATCH_SIZE: "500"
+      RETRAIN_MIN_FEEDBACK_SAMPLES: "3"
+      RETRAIN_INTERVAL_SECONDS: "30"
+      MODEL_VERSION_FILE: /models/model_version.json
+      RETRAIN_STATE_FILE: /models/retraining_state.json
+      INFERENCE_RELOAD_URL: http://inference:8000/models/reload
     restart: unless-stopped
 
   dashboard:

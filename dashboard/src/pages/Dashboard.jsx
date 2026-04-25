@@ -31,7 +31,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <section className="mb-4 rounded-[30px] border border-soc-border/80 bg-soc-panel/75 p-4 shadow-[0_24px_70px_rgba(3,10,24,0.48)] backdrop-blur-xl md:p-5">
+      <section className="mb-4 rounded-[5px] border border-soc-border/0 bg-soc-panel/75 p-4 shadow-[0_24px_70px_rgba(3,10,24,0.48)] backdrop-blur-xl md:p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
@@ -62,7 +62,7 @@ export default function DashboardPage() {
         ) : null}
       </section>
 
-      <section className="soc-glass mb-4 rounded-[28px] p-2 md:p-3">
+      <section className="soc-glass mb-4 p-2 md:p-3">
         <div className="flex flex-wrap gap-2">
           <button
             type="button"

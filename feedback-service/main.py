@@ -48,6 +48,11 @@ HONEYPOT_PATH_PATTERNS = (
     "/api/internal/user-export",
     "/internal/staff-portal",
 )
+CANARY_KEYS = (
+    "csrf-token",
+    "canary_token",
+    "debug_token",
+)
 
 
 class ProducerLike(Protocol):
@@ -141,6 +146,22 @@ def flatten_text_fields(action: dict[str, Any]) -> str:
     return " ".join(parts).lower()
 
 
+def iter_texts(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, dict):
+        texts: list[str] = []
+        for item in value.values():
+            texts.extend(iter_texts(item))
+        return texts
+    if isinstance(value, list):
+        texts: list[str] = []
+        for item in value:
+            texts.extend(iter_texts(item))
+        return texts
+    return [str(value)]
+
+
 def count_login_attempts(actions: Sequence[dict[str, Any]]) -> tuple[int, int]:
     attempts = 0
     distinct_passwords: set[str] = set()
@@ -170,6 +191,29 @@ def detect_label(actions: Sequence[dict[str, Any]]) -> SessionLabel:
     combined_text = "\n".join(texts)
     if SQLI_PATTERN.search(combined_text):
         return SessionLabel("WEB_ATTACK", 0.95, "SQL_INJECTION", "SQL injection pattern detected in sandbox traffic.")
+
+    for action in actions:
+        body = parse_jsonish(action.get("body"))
+        if isinstance(body, dict):
+            if body.get("username_confirm") not in (None, "", False) or body.get("confirm_routing_number") not in (
+                None,
+                "",
+                False,
+            ):
+                return SessionLabel(
+                    "HACKER",
+                    0.91,
+                    "HONEYPOT_ACCESS",
+                    "A hidden honeypot field was populated during the sandbox session.",
+                )
+            flattened_body = " ".join(iter_texts(body)).lower()
+            if any(token_key in flattened_body for token_key in CANARY_KEYS):
+                return SessionLabel(
+                    "HACKER",
+                    0.9,
+                    "CANARY_TOKEN",
+                    "A canary token indicator appeared in the sandbox request payload.",
+                )
 
     duration_seconds = max(
         float(actions[-1].get("timestamp", 0.0) or 0.0) - float(actions[0].get("timestamp", 0.0) or 0.0),

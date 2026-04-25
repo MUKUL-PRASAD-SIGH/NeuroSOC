@@ -5,7 +5,7 @@ export default function ModelStatusCard() {
   const { data, loading, error, lastUpdated } = modelStatus;
 
   return (
-    <section className="soc-glass rounded-[24px] p-4">
+    <section className="soc-glass p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="soc-kicker">Model Status</p>

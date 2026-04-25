@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import time
@@ -10,7 +11,10 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SESSION_ID = "live-feedback-demo"
+SESSION_ID = os.environ.get("LIVE_SESSION_ID", "live-feedback-demo")
+INFERENCE_BASE_URL = os.environ.get("INFERENCE_BASE_URL", "http://127.0.0.1:8000")
+SANDBOX_BASE_URL = os.environ.get("SANDBOX_BASE_URL", "http://127.0.0.1:8001")
+SKIP_STACK_START = os.environ.get("SKIP_STACK_START", "").strip().lower() in {"1", "true", "yes"}
 
 
 def run(command: list[str], check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -102,31 +106,35 @@ def main() -> int:
     print("[TEST] PHASE 8 LIVE FEEDBACK STACK")
     print("=========================================================\n")
 
-    print(">>> STEP 1: Build and start live services <<<")
-    run(
-        [
-            "docker",
-            "compose",
-            "--profile",
-            "phase8plus",
-            "--profile",
-            "phase10plus",
-            "up",
-            "-d",
-            "--build",
-            "postgres",
-            "kafka",
-            "redis",
-            "inference",
-            "feedback",
-            "sandbox",
-        ]
-    )
-    print("[PASS] Containers launched.")
+    if not SKIP_STACK_START:
+        print(">>> STEP 1: Build and start live services <<<")
+        run(
+            [
+                "docker",
+                "compose",
+                "--profile",
+                "phase8plus",
+                "--profile",
+                "phase10plus",
+                "up",
+                "-d",
+                "--build",
+                "postgres",
+                "kafka",
+                "redis",
+                "inference",
+                "feedback",
+                "sandbox",
+            ]
+        )
+        print("[PASS] Containers launched.")
+    else:
+        print(">>> STEP 1: Using already-running live services <<<")
+        print("[PASS] Stack startup skipped by SKIP_STACK_START.")
 
     print("\n>>> STEP 2: Wait for inference and sandbox health <<<")
-    inference_health = wait_for_json("http://127.0.0.1:8000/health", lambda payload: payload.get("status") == "ok")
-    sandbox_health = wait_for_json("http://127.0.0.1:8001/health", lambda payload: payload.get("status") == "ok")
+    inference_health = wait_for_json(f"{INFERENCE_BASE_URL}/health", lambda payload: payload.get("status") == "ok")
+    sandbox_health = wait_for_json(f"{SANDBOX_BASE_URL}/health", lambda payload: payload.get("status") == "ok")
     assert_true(inference_health["status"] == "ok", "Inference service did not become healthy.")
     assert_true(sandbox_health["status"] == "ok", "Sandbox service did not become healthy.")
     print("[PASS] Live services are healthy.")
@@ -142,7 +150,7 @@ def main() -> int:
         "login_attempts": 80,
         "all_different_passwords": True,
     }
-    verdict = http_json("POST", "http://127.0.0.1:8000/analyze", analyze_payload)
+    verdict = http_json("POST", f"{INFERENCE_BASE_URL}/analyze", analyze_payload)
     assert_true(verdict["session_id"] == SESSION_ID, "Inference response session_id mismatch.")
     verdict_row = postgres_scalar(f"SELECT verdict FROM verdicts WHERE session_id = '{SESSION_ID}' ORDER BY id DESC LIMIT 1;")
     assert_true(bool(verdict_row), "Verdict was not persisted to PostgreSQL.")
@@ -151,7 +159,7 @@ def main() -> int:
     print("\n>>> STEP 4: Create sandbox session and simulate attacker actions <<<")
     session = http_json(
         "POST",
-        "http://127.0.0.1:8001/sessions",
+        f"{SANDBOX_BASE_URL}/sessions",
         {"session_id": SESSION_ID, "user_id": "attacker-demo", "source_ip": "198.51.100.77"},
     )
     sandbox_token = session["sandbox_token"]
@@ -162,10 +170,10 @@ def main() -> int:
             "password": f"guess-{index}",
             "flow_features": [0.2] * 80 if index == 0 else None,
         }
-        http_json("POST", "http://127.0.0.1:8001/login", login_payload, headers=headers)
+        http_json("POST", f"{SANDBOX_BASE_URL}/login", login_payload, headers=headers)
     http_json(
         "POST",
-        "http://127.0.0.1:8001/sessions/" + sandbox_token + "/terminate",
+        f"{SANDBOX_BASE_URL}/sessions/" + sandbox_token + "/terminate",
         {},
     )
     action_count = postgres_scalar(f"SELECT COUNT(*) FROM sandbox_actions WHERE session_id = '{SESSION_ID}';")

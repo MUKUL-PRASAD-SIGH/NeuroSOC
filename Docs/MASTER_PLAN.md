@@ -675,7 +675,7 @@ WebSocket /ws/alerts → streams ThreatVerdict events to dashboard in real-time
   Reconnect: client handles, server just closes on disconnect
 
 HARDCODED BANK ACCOUNTS:
-normal1@novatrust.com / password123 → user_id: "alice"
+test@novatrust.com / password123 → user_id: "alice"
 normal2@novatrust.com / secure456 → user_id: "bob"
 admin@novatrust.com / Admin@2024! → user_id: "carol"
 
@@ -829,7 +829,7 @@ BEHAVIORAL TRACKER HOOK (useBehavioralTracker):
 1. Split-screen iframe CORS issue → Use same-origin or PostMessage API between panels
 2. `useBehavioralTracker` must not cause ANY re-renders → All state in refs; verify with React DevTools profiler
 
-**Testing Gate 11:** Load bank portal → login as normal1@novatrust.com → dashboard loads → `/verdict-display` shows live analysis. Run `redteam/attack_brute_force.py` → `/security-alert` shown within 10 seconds.
+**Testing Gate 11:** Load bank portal → login as test@novatrust.com → dashboard loads → `/verdict-display` shows live analysis. Run `redteam/attack_brute_force.py` → `/security-alert` shown within 10 seconds.
 
 ---
 
@@ -911,7 +911,7 @@ Prepare these for judge demo:
 ```bash
 python redteam/attack_brute_force.py --target http://localhost:3001 --attempts 100
 sudo python redteam/attack_ddos.py --target localhost --packets 5000
-python redteam/attack_normal_user.py --user normal1@novatrust.com
+python redteam/attack_normal_user.py --user test@novatrust.com
 python redteam/attack_honeypot.py --target http://localhost:3001
 python redteam/reset_demo.py   # Run between judge scenarios
 ```

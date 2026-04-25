@@ -42,7 +42,7 @@ Application login is separate from API auth.
 
 ## Demo Accounts
 
-- `normal1@novatrust.com` / `password123` -> `alice`
+- `test@novatrust.com` / `password123` -> `alice`
 - `normal2@novatrust.com` / `secure456` -> `bob`
 - `admin@novatrust.com` / `Admin@2024!` -> `carol`
 
@@ -163,7 +163,7 @@ Request:
 
 ```json
 {
-  "user_id": "normal1@novatrust.com",
+  "user_id": "test@novatrust.com",
   "session_id": "portal-123",
   "events": [{ "type": "mousemove", "timestamp": 1.0, "x": 10, "y": 20 }],
   "source_ip": "127.0.0.1",
@@ -176,7 +176,7 @@ Response:
 ```json
 {
   "status": "captured",
-  "userId": "normal1@novatrust.com",
+  "userId": "test@novatrust.com",
   "sessionId": "portal-123",
   "eventCount": 14,
   "vector": [0.12, 0.08, 0.44]
@@ -222,7 +222,7 @@ Request:
 
 ```json
 {
-  "email": "normal1@novatrust.com",
+  "email": "test@novatrust.com",
   "password": "password123",
   "session_id": "portal-123",
   "source_ip": "127.0.0.1"

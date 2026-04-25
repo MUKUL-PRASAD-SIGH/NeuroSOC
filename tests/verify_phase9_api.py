@@ -114,7 +114,7 @@ def main() -> int:
         behavior_response = client.post(
             "/api/behavioral",
             json={
-                "user_id": "normal1@novatrust.com",
+                "user_id": "test@novatrust.com",
                 "session_id": "portal-legit",
                 "source_ip": "127.0.0.1",
                 "events": [
@@ -127,7 +127,7 @@ def main() -> int:
         login_response = client.post(
             "/api/bank/login",
             json={
-                "email": "normal1@novatrust.com",
+                "email": "test@novatrust.com",
                 "password": "password123",
                 "session_id": "portal-legit",
                 "source_ip": "127.0.0.1",

@@ -57,8 +57,8 @@ const STORAGE_KEY = 'novatrust.portal.mock_state';
 export const MOCK_USERS: MockPortalUser[] = [
   {
     userId: 'usr-4012',
-    email: '[test@mail.com]',
-    password: '[12345678]',
+    email: 'test@novatrust.com',
+    password: 'password123',
     displayName: 'Ava Morales',
     role: 'Platinum Personal Banking',
     behaviorProfile: 'steady',

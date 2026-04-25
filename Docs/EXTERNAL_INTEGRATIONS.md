@@ -233,7 +233,7 @@ Generate realistic behavioral data that matches a real person's typing patterns.
 Run this seeding script (ask Antigravity to generate it):
 ```
 Write a Python script called redteam/seed_profiles.py that:
-1. Generates 10 synthetic "sessions" for user "normal1@novatrust.com" with:
+1. Generates 10 synthetic "sessions" for user "test@novatrust.com" with:
    - Inter-keystroke intervals: random normal distribution, mean=90ms, std=15ms
    - Dwell times: random normal, mean=60ms, std=10ms
    - Mouse velocities: random normal, mean=200px/s, std=50px/s
@@ -273,7 +273,7 @@ python redteam/attack_brute_force.py --target http://localhost:3001 --attempts 1
 sudo python redteam/attack_ddos.py --target localhost --port 3001 --packets 5000
 
 # Normal user simulation
-python redteam/attack_normal_user.py --user normal1@novatrust.com --sessions 3
+python redteam/attack_normal_user.py --user test@novatrust.com --sessions 3
 
 # Reset demo state (run between demo runs)
 python redteam/reset_demo.py

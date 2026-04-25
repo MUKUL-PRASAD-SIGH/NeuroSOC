@@ -16,7 +16,7 @@
 ## User Personas & Pre-Seeded Accounts
 
 ### Persona 1 — Normal User (Alice)
-- **Email:** normal1@novatrust.com
+- **Email:** test@novatrust.com
 - **Password:** password123
 - **Behavioral Profile:** Slow typist, 80–120ms inter-key interval, deliberate mouse movements
 - **Pre-seeded sessions:** 10 baseline sessions

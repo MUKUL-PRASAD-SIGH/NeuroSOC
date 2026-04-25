@@ -6,6 +6,7 @@ import {defineConfig, loadEnv} from 'vite';
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   const apiTarget = env.VITE_API_URL || 'http://localhost:8000';
+  const ingestionTarget = env.VITE_INGESTION_URL || 'http://localhost:8080';
   return {
     plugins: [react(), tailwindcss()],
     define: {
@@ -28,6 +29,10 @@ export default defineConfig(({mode}) => {
         '/ws': {
           target: apiTarget,
           ws: true,
+          changeOrigin: true,
+        },
+        '/ingest': {
+          target: ingestionTarget,
           changeOrigin: true,
         },
       },

@@ -1,8 +1,35 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { getSandboxReplay } from '../../lib/portalApi';
 import { clearPortalSession, readPortalSession } from '../../lib/portalSession';
 
 export default function SecurityAlert() {
   const session = readPortalSession();
+  const [replayCount, setReplayCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadReplay() {
+      if (!session.sessionId) {
+        return;
+      }
+
+      try {
+        const replay = await getSandboxReplay(session.sessionId);
+        if (!cancelled) {
+          setReplayCount(replay.actions.length);
+        }
+      } catch (error) {
+        console.error('Replay load failed:', error);
+      }
+    }
+
+    void loadReplay();
+    return () => {
+      cancelled = true;
+    };
+  }, [session.sessionId]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
@@ -52,6 +79,18 @@ export default function SecurityAlert() {
                   <li>Your account remains secure</li>
                 </ul>
               </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-400 font-['Inter'] font-semibold">
+              Sandbox State
+            </p>
+            <div className="mt-3 space-y-2 text-sm text-slate-600 font-['Inter']">
+              <p>Verdict: <span className="font-semibold text-[#002147]">{session.verdict || 'HACKER'}</span></p>
+              <p>Mode: <span className="font-semibold">{session.sandbox?.mode || 'placeholder'}</span></p>
+              <p>Sandbox token: <span className="font-mono text-xs">{session.sandbox?.sandboxToken || 'pending'}</span></p>
+              <p>Captured actions: <span className="font-semibold">{replayCount ?? 'loading...'}</span></p>
             </div>
           </div>
 

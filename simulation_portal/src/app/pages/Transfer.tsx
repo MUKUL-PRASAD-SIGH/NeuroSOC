@@ -1,6 +1,7 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { reportHoneypotHit, reportWebAttack, transferBank } from '../../lib/portalApi';
+import { useBehavioralTracker } from '../../hooks/useBehavioralTracker';
 import { readPortalSession, writePortalSession } from '../../lib/portalSession';
 import { getMockUser } from '../../lib/portalMock';
 
@@ -8,6 +9,11 @@ export default function Transfer() {
   const navigate = useNavigate();
   const session = readPortalSession();
   const profile = getMockUser(session.userId || session.email);
+  const tracker = useBehavioralTracker({
+    userId: session.userId || session.email || 'anonymous',
+    sessionId: session.sessionId,
+    page: '/transfer',
+  });
   const [recipientName, setRecipientName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [routingNumber, setRoutingNumber] = useState('');
@@ -15,12 +21,19 @@ export default function Transfer() {
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ tone: 'success' | 'warning' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
     if (!session.userId || !session.authenticated) {
       navigate('/login', { replace: true });
+      return;
     }
-  }, [navigate, session.authenticated, session.userId]);
+
+    tracker.startTracking();
+    return () => {
+      tracker.stopTracking();
+    };
+  }, [navigate, session.authenticated, session.userId, tracker.startTracking, tracker.stopTracking]);
 
   const detectSQLInjection = (text: string): boolean => {
     const sqlPatterns = [
@@ -39,19 +52,38 @@ export default function Transfer() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setFeedback(null);
 
     try {
+      await tracker.flushEvents();
+
       if (detectSQLInjection(memo)) {
-        await reportWebAttack(session.userId || 'unknown-user', session.sessionId, memo);
+        const attack = await reportWebAttack(session.userId || 'unknown-user', tracker.sessionId, memo);
+        writePortalSession({
+          sessionId: attack.sessionId,
+          verdict: attack.verdict,
+          confidence: attack.confidence,
+          sandbox: attack.sandbox || null,
+        });
+        navigate('/security-alert');
+        return;
       }
 
       if (confirmRoutingNumber) {
-        await reportHoneypotHit('transfer_form', session.userId || 'unknown-user', session.sessionId);
+        const honeypot = await reportHoneypotHit('transfer_form', session.userId || 'unknown-user', tracker.sessionId);
+        writePortalSession({
+          sessionId: honeypot.sessionId,
+          verdict: honeypot.verdict,
+          confidence: honeypot.confidence,
+          sandbox: honeypot.sandbox || null,
+        });
+        navigate('/security-alert');
+        return;
       }
 
       const result = await transferBank({
         userId: session.userId || 'unknown-user',
-        sessionId: session.sessionId,
+        sessionId: tracker.sessionId,
         destination: `${recipientName} ${accountNumber} ${routingNumber}`.trim(),
         amount: Number(amount),
         memo,
@@ -70,11 +102,25 @@ export default function Transfer() {
         return;
       }
 
-      alert(`Transfer of $${amount} to ${recipientName} has been initiated.`);
-      navigate('/dashboard');
+      if (result.status === 'suspicious' || result.verdict === 'FORGETFUL_USER') {
+        setFeedback({
+          tone: 'warning',
+          message: result.message || 'Transfer flagged for manual review.',
+        });
+        return;
+      }
+
+      setFeedback({
+        tone: 'success',
+        message: result.message || `Transfer of $${amount} to ${recipientName} has been initiated.`,
+      });
+      window.setTimeout(() => navigate('/dashboard'), 1800);
     } catch (error) {
       console.error('Transfer error:', error);
-      alert('An error occurred during the transfer.');
+      setFeedback({
+        tone: 'error',
+        message: error instanceof Error ? error.message : 'An error occurred during the transfer.',
+      });
     } finally {
       setLoading(false);
     }
@@ -231,6 +277,20 @@ export default function Transfer() {
             >
               {loading ? 'Processing...' : 'Transfer Money'}
             </button>
+
+            {feedback ? (
+              <div
+                className={`mt-4 rounded-lg px-4 py-3 text-sm font-['Inter'] ${
+                  feedback.tone === 'success'
+                    ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : feedback.tone === 'warning'
+                      ? 'border border-amber-200 bg-amber-50 text-amber-700'
+                      : 'border border-red-200 bg-red-50 text-red-700'
+                }`}
+              >
+                {feedback.message}
+              </div>
+            ) : null}
           </form>
 
           {/* Security Notice */}

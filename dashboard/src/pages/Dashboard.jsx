@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import AlertFeed from "../components/AlertFeed";
+import IngestionWorkbench from "../components/IngestionWorkbench";
 import ModelStatusCard from "../components/ModelStatusCard";
 import StatsBar from "../components/StatsBar";
 import ThreatMap from "../components/ThreatMap";
@@ -88,6 +89,8 @@ export default function DashboardPage() {
           </button>
         </div>
       </section>
+
+      <IngestionWorkbench />
 
       {activeTab === "overview" ? (
         <section className="relative">

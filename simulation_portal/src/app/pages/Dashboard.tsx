@@ -1,13 +1,20 @@
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { clearPortalSession, readPortalSession, setDebugToken } from '../../lib/portalSession';
+import { useBehavioralTracker } from '../../hooks/useBehavioralTracker';
 import { getMockDashboardData } from '../../lib/portalMock';
 
 const CANARY_TOKEN = 'NT_CANARY_7f8e9d2a1b3c4e5f6g7h8i9j0k';
+const INTERNAL_EXPORT_ENDPOINT = '/api/internal/user-export';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const session = readPortalSession();
+  const tracker = useBehavioralTracker({
+    userId: session.userId || session.email || 'anonymous',
+    sessionId: session.sessionId,
+    page: '/dashboard',
+  });
   const dashboardData = getMockDashboardData(session.userId || session.email);
   const displayName = session.displayName || dashboardData.displayName;
   const balance = session.account?.balance ?? dashboardData.account.balance;
@@ -32,7 +39,20 @@ export default function Dashboard() {
     }
 
     setDebugToken(CANARY_TOKEN);
-  }, [navigate, session.authenticated, session.sandbox?.active, session.userId, session.verdict]);
+    tracker.startTracking();
+
+    return () => {
+      tracker.stopTracking();
+    };
+  }, [
+    navigate,
+    session.authenticated,
+    session.sandbox?.active,
+    session.userId,
+    session.verdict,
+    tracker.startTracking,
+    tracker.stopTracking,
+  ]);
 
   const handleLogout = () => {
     clearPortalSession();
@@ -43,6 +63,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-50">
       {/* Hidden canary token in HTML comment */}
       {/* ref: NT_CANARY_7f8e9d2a1b3c4e5f6g7h8i9j0k */}
+      <div hidden aria-hidden="true" data-export-endpoint={INTERNAL_EXPORT_ENDPOINT} />
 
       {/* Header */}
       <header className="bg-white border-b border-gray-200">
@@ -57,6 +78,11 @@ export default function Dashboard() {
             <Link to="/transfer">
               <button className="text-[#002147] px-4 py-2 hover:bg-gray-100 rounded transition-colors font-['Inter']">
                 Transfer
+              </button>
+            </Link>
+            <Link to="/system-flow">
+              <button className="text-[#002147] px-4 py-2 hover:bg-gray-100 rounded transition-colors font-['Inter']">
+                System Flow
               </button>
             </Link>
             <button
@@ -93,7 +119,7 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-3 gap-4 mb-8">
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
           <Link to="/transfer">
             <button className="w-full bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow text-left">
               <div className="w-12 h-12 bg-[#002147] rounded-lg mb-4 flex items-center justify-center">
@@ -103,6 +129,18 @@ export default function Dashboard() {
               </div>
               <h3 className="font-['Inter'] font-semibold text-[#002147] mb-1">Transfer Money</h3>
               <p className="text-sm text-gray-600 font-['Inter']">Send to another account</p>
+            </button>
+          </Link>
+
+          <Link to="/system-flow">
+            <button className="w-full bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow text-left">
+              <div className="w-12 h-12 bg-[#002147] rounded-lg mb-4 flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h16M4 17h10" />
+                </svg>
+              </div>
+              <h3 className="font-['Inter'] font-semibold text-[#002147] mb-1">System Flow</h3>
+              <p className="text-sm text-gray-600 font-['Inter']">Run the live ingestion and verdict scripts</p>
             </button>
           </Link>
 

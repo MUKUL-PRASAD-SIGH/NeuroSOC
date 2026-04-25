@@ -1,23 +1,27 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useBehavioralTracker } from '../hooks/useBehavioralTracker';
 import { getUserVerdict, loginBank, reportHoneypotHit } from '../../lib/portalApi';
+import { useBehavioralTracker } from '../../hooks/useBehavioralTracker';
 import { readPortalSession, writePortalSession } from '../../lib/portalSession';
 
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmEmail, setConfirmEmail] = useState(''); // Honeypot field
+  const [usernameConfirm, setUsernameConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const storedSession = readPortalSession();
-  const { sessionId, startTracking, stopTracking, flushEvents } = useBehavioralTracker(email || storedSession.email || 'anonymous');
+  const tracker = useBehavioralTracker({
+    userId: email || storedSession.email || 'anonymous',
+    sessionId: storedSession.sessionId,
+    page: '/login',
+  });
 
   useEffect(() => {
-    startTracking();
-    return () => stopTracking();
-  }, [startTracking, stopTracking]);
+    tracker.startTracking();
+    return () => tracker.stopTracking();
+  }, [tracker.startTracking, tracker.stopTracking]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -25,14 +29,15 @@ export default function Login() {
     setError('');
 
     try {
-      await flushEvents();
+      await tracker.flushEvents();
 
-      if (confirmEmail) {
-        const honeypot = await reportHoneypotHit('login_form', email || 'anonymous', sessionId);
+      if (usernameConfirm) {
+        const honeypot = await reportHoneypotHit('login_form', email || 'anonymous', tracker.sessionId);
         writePortalSession({
           sessionId: honeypot.sessionId,
           email,
           verdict: honeypot.verdict,
+          confidence: honeypot.confidence,
           sandbox: honeypot.sandbox || null,
           authenticated: false,
         });
@@ -43,7 +48,7 @@ export default function Login() {
       const loginData = await loginBank({
         email,
         password,
-        sessionId,
+        sessionId: tracker.sessionId,
       });
 
       const verdict = await getUserVerdict(loginData.user_id);
@@ -70,7 +75,7 @@ export default function Login() {
         return;
       }
 
-      navigate('/dashboard');
+      navigate(loginData.next || '/dashboard');
     } catch (error) {
       console.error('Login error:', error);
       setError(error instanceof Error ? error.message : 'An error occurred. Please try again.');
@@ -113,13 +118,13 @@ export default function Login() {
 
             {/* Honeypot field - hidden from real users */}
             <div style={{ opacity: 0, position: 'absolute', top: '-9999px', left: '-9999px' }} aria-hidden="true">
-              <label htmlFor="confirm_email">Confirm Email</label>
+              <label htmlFor="username_confirm">Confirm Username</label>
               <input
-                id="confirm_email"
-                name="confirm_email"
+                id="username_confirm"
+                name="username_confirm"
                 type="text"
-                value={confirmEmail}
-                onChange={(e) => setConfirmEmail(e.target.value)}
+                value={usernameConfirm}
+                onChange={(e) => setUsernameConfirm(e.target.value)}
                 tabIndex={-1}
                 autoComplete="off"
               />

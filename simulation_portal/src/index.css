@@ -25,3 +25,41 @@ body {
     background: linear-gradient(180deg, #f8fafc 0%, #eef2f8 100%);
     color: #0f172a;
 }
+
+@keyframes ntFlowFloat {
+    0% {
+        transform: rotateX(0deg) rotateY(0deg) translateY(0px);
+    }
+    50% {
+        transform: rotateX(5deg) rotateY(-4deg) translateY(-4px);
+    }
+    100% {
+        transform: rotateX(0deg) rotateY(0deg) translateY(0px);
+    }
+}
+
+@keyframes ntFlowPulse {
+    0% {
+        box-shadow: 0 0 0 rgba(103, 232, 249, 0.15);
+    }
+    50% {
+        box-shadow: 0 0 28px rgba(103, 232, 249, 0.28);
+    }
+    100% {
+        box-shadow: 0 0 0 rgba(103, 232, 249, 0.15);
+    }
+}
+
+.nt-flow-tilt-panel {
+    transform-style: preserve-3d;
+    animation: ntFlowFloat 9s ease-in-out infinite;
+}
+
+.nt-flow-node {
+    transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
+}
+
+.nt-flow-node-active {
+    animation: ntFlowPulse 2.8s ease-in-out infinite;
+    transform: translateX(4px) scale(1.01);
+}

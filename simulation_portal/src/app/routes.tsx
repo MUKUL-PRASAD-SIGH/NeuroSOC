@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Transfer from './pages/Transfer';
 import SecurityAlert from './pages/SecurityAlert';
+import SystemFlow from './pages/SystemFlow';
 import VerdictDisplay from './pages/VerdictDisplay';
 
 export const router = createBrowserRouter([
@@ -26,6 +27,10 @@ export const router = createBrowserRouter([
   {
     path: '/security-alert',
     Component: SecurityAlert,
+  },
+  {
+    path: '/system-flow',
+    Component: SystemFlow,
   },
   {
     path: '/verdict-display',

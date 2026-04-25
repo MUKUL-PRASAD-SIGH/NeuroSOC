@@ -264,7 +264,13 @@ export async function mockPostBehavioral(payload: BehavioralPayload) {
     ...payload.events.map((event) => ({ ...event, page: payload.page })),
   ].slice(-100);
   writeState(state);
-  return { status: 'captured', sessionId: payload.sessionId, count: state.eventsBySession[payload.sessionId].length };
+  return {
+    status: 'captured',
+    userId: payload.userId,
+    sessionId: payload.sessionId,
+    eventCount: state.eventsBySession[payload.sessionId].length,
+    vector: Array.from({ length: 6 }, (_, index) => Number((0.12 + index * 0.03).toFixed(3))),
+  };
 }
 
 export async function mockLoginBank(payload: BankLoginPayload) {
@@ -319,12 +325,16 @@ export async function mockTransferBank(payload: BankTransferPayload) {
   writeState(state);
 
   return {
-    status: score.verdict === 'LEGITIMATE' || score.verdict === 'FORGETFUL_USER' ? 'accepted' : 'sandboxed',
+    status: score.verdict === 'HACKER' ? 'sandboxed' : score.verdict === 'FORGETFUL_USER' ? 'suspicious' : 'accepted',
     sessionId: payload.sessionId,
     verdict: score.verdict,
     confidence: score.confidence,
     sandbox: score.sandbox,
-    message: score.sandbox?.active ? 'Transfer moved into sandbox review.' : 'Transfer accepted for processing.',
+    message: score.sandbox?.active
+      ? 'Transfer moved into sandbox review.'
+      : score.verdict === 'FORGETFUL_USER'
+        ? 'Transfer queued for manual review.'
+        : 'Transfer accepted for processing.',
   };
 }
 
@@ -337,7 +347,7 @@ export async function mockHoneypotHit(source: string, userId: string, sessionId:
     { type: 'honeypot', source, timestamp: Date.now() },
   ].slice(-100);
   writeState(state);
-  return { status: 'captured', sessionId, verdict: score.verdict, sandbox: score.sandbox };
+  return { status: 'captured', sessionId, verdict: score.verdict, confidence: score.confidence, sandbox: score.sandbox };
 }
 
 export async function mockWebAttack(userId: string, sessionId: string, payload: string) {
@@ -349,19 +359,21 @@ export async function mockWebAttack(userId: string, sessionId: string, payload: 
     { type: 'web_attack', payload, timestamp: Date.now() },
   ].slice(-100);
   writeState(state);
-  return { status: 'captured', sessionId, verdict: score.verdict, sandbox: score.sandbox };
+  return { status: 'captured', sessionId, verdict: score.verdict, confidence: score.confidence, sandbox: score.sandbox };
 }
 
 export async function mockCurrentVerdict() {
   const state = readState();
   return {
     sessionId: state.currentSessionId,
+    userId: state.currentUserId || undefined,
     verdict: state.verdict,
     confidence: state.confidence,
     snnScore: state.snnScore,
     lnnClass: state.lnnClass,
     xgbClass: state.xgbClass,
     behavioralDelta: state.behavioralDelta,
+    modelVersion: '0.9.0-mock',
     sandbox: state.sandbox,
   };
 }
@@ -376,12 +388,14 @@ export async function mockUserVerdict(userId: string) {
   }
   return {
     sessionId: state.currentSessionId,
+    userId,
     verdict: state.currentUserId === userId ? state.verdict : user?.behaviorProfile === 'risky' ? 'FORGETFUL_USER' : 'LEGITIMATE',
     confidence: state.currentUserId === userId ? state.confidence : 0.82,
     snnScore: state.currentUserId === userId ? state.snnScore : 0.22,
     lnnClass: state.currentUserId === userId ? state.lnnClass : 'LEGITIMATE',
     xgbClass: state.currentUserId === userId ? state.xgbClass : 'LEGITIMATE',
     behavioralDelta: state.currentUserId === userId ? state.behavioralDelta : 0.18,
+    modelVersion: '0.9.0-mock',
     sandbox: state.currentUserId === userId ? state.sandbox : null,
     recentVerdicts: state.recentVerdictsByUser[userId] || [],
   };
@@ -395,4 +409,49 @@ export async function mockSandboxReplay(sessionId: string) {
     mode: state.sandbox?.mode || 'monitor',
     actions: state.replayBySession[sessionId] || state.eventsBySession[sessionId] || [],
   };
+}
+
+export async function mockModelVersion() {
+  return {
+    version: '0.9.0-mock',
+    versions: [
+      { label: 'Primary', value: '0.9.0-mock' },
+      { label: 'SNN', value: 'snn-mock' },
+      { label: 'LNN', value: 'lnn-mock' },
+      { label: 'XGBoost', value: 'xgb-mock' },
+    ],
+    validationF1: [
+      { label: 'SNN', value: 0.91 },
+      { label: 'LNN', value: 0.89 },
+      { label: 'XGBoost', value: 0.94 },
+    ],
+    lastRetrainedAt: '2026-04-25T00:00:00Z',
+    activeModels: ['SNN', 'LNN', 'XGBoost'],
+  };
+}
+
+export async function mockAlerts() {
+  const state = readState();
+  if (state.verdict !== 'HACKER') {
+    return [];
+  }
+
+  const userId = state.currentUserId || 'intruder-demo';
+  return [
+    {
+      id: state.currentSessionId || `alert-${Date.now()}`,
+      severity: 'critical',
+      verdict: state.verdict,
+      message: 'Live honeypot escalation promoted this session into sandbox isolation.',
+      timestamp: new Date().toISOString(),
+      sourceIp: '203.0.113.77',
+      userId,
+      userName: userId === 'intruder-demo' ? 'Unknown Intruder' : getMockUser(userId)?.displayName || 'Unknown User',
+      locationLabel: 'Sandbox trap route',
+      score: state.confidence,
+      dimensions: ['honeypot', 'portal'],
+      recentVerdicts: state.recentVerdictsByUser[userId] || [],
+      modelVersion: '0.9.0-mock',
+    },
+  ];
 }

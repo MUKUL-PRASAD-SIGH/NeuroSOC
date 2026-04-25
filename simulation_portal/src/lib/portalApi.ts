@@ -3,25 +3,94 @@ export interface BehavioralPayload {
   sessionId: string;
   events: Array<Record<string, unknown>>;
   page?: string;
+  sourceIp?: string;
 }
 
 export interface BankLoginPayload {
   email: string;
   password: string;
   sessionId: string;
+  sourceIp?: string;
 }
 
 export interface BankTransferPayload {
   userId: string;
   sessionId: string;
+  sourceIp?: string;
   destination: string;
   amount: number;
   memo?: string;
   confirmRoutingNumber?: string;
 }
 
+export interface RawIngestEvent {
+  src_ip: string;
+  dst_ip: string;
+  src_port: number;
+  dst_port: number;
+  protocol: string;
+  length: number;
+  ttl?: number;
+  flags?: Record<string, unknown>;
+  extra?: Record<string, unknown>;
+}
+
+export interface RawIngestPayload {
+  userId?: string;
+  sessionId?: string;
+  events: RawIngestEvent[];
+}
+
+export interface BehavioralCaptureResponse {
+  status: string;
+  userId?: string;
+  sessionId: string;
+  eventCount?: number;
+  count?: number;
+  vector?: number[];
+}
+
+export interface PortalVerdictSnapshot {
+  sessionId?: string | null;
+  userId?: string;
+  verdict: string;
+  confidence: number;
+  snnScore: number;
+  lnnClass: string;
+  xgbClass: string;
+  behavioralDelta: number;
+  modelVersion?: string;
+  sandbox?: { active: boolean; mode?: string; sandboxToken?: string; sandboxPath?: string } | null;
+  recentVerdicts?: Array<{ id: string; verdict: string; score: number; timestamp: string | number }>;
+  history?: Array<Record<string, unknown>>;
+}
+
+export interface ModelVersionResponse {
+  version: string;
+  versions?: Array<{ label: string; value: string }>;
+  validationF1?: Array<{ label: string; value: number }>;
+  lastRetrainedAt?: string;
+  activeModels?: string[];
+}
+
+export interface AlertPayload {
+  id: string;
+  severity: string;
+  verdict: string;
+  message: string;
+  timestamp: string | number;
+  sourceIp?: string;
+  userId?: string;
+  userName?: string;
+  locationLabel?: string;
+  score?: number;
+  dimensions?: string[];
+  recentVerdicts?: Array<{ id: string; verdict: string; score: number; timestamp: string | number }>;
+  modelVersion?: string;
+}
+
 const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-const USE_MOCKS = !API_BASE_URL || import.meta.env.VITE_USE_MOCKS === 'true';
+const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
 
 export function buildApiUrl(path: string) {
   return API_BASE_URL ? `${API_BASE_URL}${path}` : path;
@@ -54,9 +123,11 @@ async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
 
 async function mockRequestJson<T>(input: string, init?: RequestInit): Promise<T> {
   const {
+    mockAlerts,
     mockCurrentVerdict,
     mockHoneypotHit,
     mockLoginBank,
+    mockModelVersion,
     mockPostBehavioral,
     mockSandboxReplay,
     mockTransferBank,
@@ -105,6 +176,22 @@ async function mockRequestJson<T>(input: string, init?: RequestInit): Promise<T>
     return mockCurrentVerdict() as Promise<T>;
   }
 
+  if (input === '/api/model/version') {
+    return mockModelVersion() as Promise<T>;
+  }
+
+  if (input === '/api/alerts') {
+    return mockAlerts() as Promise<T>;
+  }
+
+  if (input === '/ingest') {
+    return Promise.resolve({
+      status: 'ok',
+      published: Array.isArray(body.events) ? body.events.length : 0,
+      mode: 'mock',
+    } as T);
+  }
+
   const userVerdictMatch = input.match(/^\/api\/verdicts\/([^/]+)$/);
   if (userVerdictMatch) {
     return mockUserVerdict(decodeURIComponent(userVerdictMatch[1])) as Promise<T>;
@@ -119,11 +206,12 @@ async function mockRequestJson<T>(input: string, init?: RequestInit): Promise<T>
 }
 
 export function postBehavioral(payload: BehavioralPayload) {
-  return requestJson('/api/behavioral', {
+  return requestJson<BehavioralCaptureResponse>('/api/behavioral', {
     method: 'POST',
     body: JSON.stringify({
       user_id: payload.userId,
       session_id: payload.sessionId,
+      source_ip: payload.sourceIp,
       events: payload.events,
       page: payload.page,
     }),
@@ -148,6 +236,7 @@ export function loginBank(payload: BankLoginPayload) {
       email: payload.email,
       password: payload.password,
       session_id: payload.sessionId,
+      source_ip: payload.sourceIp,
     }),
   });
 }
@@ -165,6 +254,7 @@ export function transferBank(payload: BankTransferPayload) {
     body: JSON.stringify({
       user_id: payload.userId,
       session_id: payload.sessionId,
+      source_ip: payload.sourceIp,
       destination: payload.destination,
       amount: payload.amount,
       memo: payload.memo,
@@ -173,11 +263,12 @@ export function transferBank(payload: BankTransferPayload) {
   });
 }
 
-export function reportHoneypotHit(source: string, userId: string, sessionId: string) {
+export function reportHoneypotHit(source: string, userId: string, sessionId: string, sourceIp?: string) {
   return requestJson<{
     status: string;
     sessionId: string;
     verdict: string;
+    confidence?: number;
     sandbox?: { active: boolean; mode?: string; sandboxToken?: string; sandboxPath?: string } | null;
   }>('/api/bank/honeypot-hit', {
     method: 'POST',
@@ -185,15 +276,17 @@ export function reportHoneypotHit(source: string, userId: string, sessionId: str
       source,
       user_id: userId,
       session_id: sessionId,
+      source_ip: sourceIp,
     }),
   });
 }
 
-export function reportWebAttack(userId: string, sessionId: string, payload: string) {
+export function reportWebAttack(userId: string, sessionId: string, payload: string, sourceIp?: string) {
   return requestJson<{
     status: string;
     sessionId: string;
     verdict: string;
+    confidence?: number;
     sandbox?: { active: boolean; mode?: string; sandboxToken?: string; sandboxPath?: string } | null;
   }>('/api/bank/web-attack-detected', {
     method: 'POST',
@@ -202,35 +295,17 @@ export function reportWebAttack(userId: string, sessionId: string, payload: stri
       payload,
       user_id: userId,
       session_id: sessionId,
+      source_ip: sourceIp,
     }),
   });
 }
 
 export function getCurrentVerdict() {
-  return requestJson<{
-    sessionId?: string | null;
-    verdict: string;
-    confidence: number;
-    snnScore: number;
-    lnnClass: string;
-    xgbClass: string;
-    behavioralDelta: number;
-    sandbox?: { active: boolean; mode?: string; sandboxToken?: string; sandboxPath?: string } | null;
-  }>('/api/verdicts/current');
+  return requestJson<PortalVerdictSnapshot>('/api/verdicts/current');
 }
 
 export function getUserVerdict(userId: string) {
-  return requestJson<{
-    sessionId?: string | null;
-    verdict: string;
-    confidence: number;
-    snnScore: number;
-    lnnClass: string;
-    xgbClass: string;
-    behavioralDelta: number;
-    sandbox?: { active: boolean; mode?: string; sandboxToken?: string; sandboxPath?: string } | null;
-    recentVerdicts?: Array<{ id: string; verdict: string; score: number; timestamp: string | number }>;
-  }>(`/api/verdicts/${userId}`);
+  return requestJson<PortalVerdictSnapshot>(`/api/verdicts/${userId}`);
 }
 
 export function getSandboxReplay(sessionId: string) {
@@ -240,4 +315,28 @@ export function getSandboxReplay(sessionId: string) {
     mode?: string;
     actions: Array<Record<string, unknown>>;
   }>(`/api/sandbox/${sessionId}/replay`);
+}
+
+export function getModelVersion() {
+  return requestJson<ModelVersionResponse>('/api/model/version');
+}
+
+export function getAlerts() {
+  return requestJson<AlertPayload[]>('/api/alerts');
+}
+
+export function postRawIngest(payload: RawIngestPayload) {
+  return requestJson<{
+    status: string;
+    published: number;
+    detail?: string;
+    mode?: string;
+  }>('/ingest', {
+    method: 'POST',
+    body: JSON.stringify({
+      user_id: payload.userId,
+      session_id: payload.sessionId,
+      events: payload.events,
+    }),
+  });
 }

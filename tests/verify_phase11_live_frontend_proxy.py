@@ -12,7 +12,6 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DASHBOARD_BASE_URL = os.environ.get("DASHBOARD_BASE_URL", "http://127.0.0.1:3000")
 PORTAL_BASE_URL = os.environ.get("PORTAL_BASE_URL", "http://127.0.0.1:3001")
-INFERENCE_BASE_URL = os.environ.get("INFERENCE_BASE_URL", "http://127.0.0.1:8000")
 SANDBOX_BASE_URL = os.environ.get("SANDBOX_BASE_URL", "http://127.0.0.1:8001")
 SKIP_STACK_START = os.environ.get("SKIP_STACK_START", "").strip().lower() in {"1", "true", "yes"}
 
@@ -152,13 +151,16 @@ def main() -> int:
     )
     print("[PASS] Portal replay flows back from the live sandbox through inference.")
 
-    print("\n>>> STEP 6: Verify inference itself now reports live sandbox state <<<")
-    current_verdict, _ = http_request("GET", f"{INFERENCE_BASE_URL}/api/verdicts/current")
+    print("\n>>> STEP 6: Verify the portal proxy now reports live sandbox state <<<")
+    current_verdict, _ = wait_for(
+        f"{PORTAL_BASE_URL}/api/verdicts/current",
+        lambda payload, _headers: isinstance(payload, dict) and payload.get("sandbox", {}).get("active") is True,
+    )
     assert_true(
         isinstance(current_verdict, dict) and current_verdict.get("sandbox", {}).get("active") is True,
-        "Inference should report an active sandbox session after the portal honeypot flow.",
+        "Portal /api/verdicts/current should report an active sandbox session after the honeypot flow.",
     )
-    print("[PASS] Inference reports live sandbox state for the active session.")
+    print("[PASS] Portal proxy reports live sandbox state for the active session.")
 
     print("\n[SUCCESS] Phase 11 live frontend proxy and real sandbox verification passed.")
     return 0

@@ -939,8 +939,13 @@ class InferenceRuntime:
 
     def _handle_verdict(self, verdict: ThreatVerdict) -> ThreatVerdict:
         self._persist_verdict(verdict)
-        if not self._latest_verdicts or self._latest_verdicts[0].get("session_id") != verdict.session_id:
-            self._latest_verdicts.appendleft(verdict.to_dict())
+        canonical_verdict = verdict.to_dict()
+        with self._lock:
+            prior_items = [item for item in self._latest_verdicts if item.get("session_id") != verdict.session_id]
+            self._latest_verdicts.clear()
+            self._latest_verdicts.appendleft(canonical_verdict)
+            for item in prior_items:
+                self._latest_verdicts.append(item)
         if verdict.verdict == "HACKER":
             alert_payload = {
                 "session_id": verdict.session_id,
@@ -1113,10 +1118,14 @@ def _run_portal_analysis(session: PortalSession, user_id: str) -> ThreatVerdict:
         verdict = _promote_verdict(verdict, xgb_class="WEB_ATTACK", confidence=0.97, reason="WEB_ATTACK_REPORT")
     elif session.failed_logins >= 5 and len(session.login_passwords) > 1:
         verdict = _promote_verdict(verdict, xgb_class="BRUTE_FORCE", confidence=0.93, reason="BRUTE_FORCE_PATTERN")
+    elif 2 <= session.failed_logins < 5:
+        verdict = _promote_verdict(verdict, xgb_class="OTHER", confidence=0.58, reason="LOGIN_RECOVERY_PATTERN")
     elif session.transfer_attempts and float(session.transfer_attempts[-1]["amount"]) >= 10000:
         verdict = _promote_verdict(verdict, xgb_class="OTHER", confidence=0.65, reason="TRANSFER_HEAT")
 
     final_verdict = runtime._handle_verdict(verdict)
+    with runtime._lock:
+        runtime._processed_messages += 1
     portal_state.set_verdict(session.session_id, final_verdict.to_dict())
     return final_verdict
 
@@ -1310,13 +1319,22 @@ def bank_transfer(request: BankTransferRequest, response: Response) -> dict[str,
     if verdict.verdict == "HACKER":
         sandbox = _activate_sandbox(response, session, request.user_id, request.source_ip)
 
+    status = "accepted"
+    message = "Transfer authorized"
+    if sandbox:
+        status = "sandboxed"
+        message = "Transfer diverted into sandbox review."
+    elif verdict.verdict != "LEGITIMATE" or request.amount >= 10000:
+        status = "suspicious"
+        message = "Transfer pending manual review."
+
     return {
-        "status": "sandboxed" if sandbox else "accepted",
+        "status": status,
         "sessionId": session.session_id,
         "verdict": verdict.verdict,
         "confidence": verdict.confidence,
         "sandbox": sandbox,
-        "message": "Transfer pending review" if sandbox else "Transfer authorized",
+        "message": message,
     }
 
 
@@ -1329,6 +1347,7 @@ def honeypot_hit(request: HoneypotHitRequest, response: Response) -> dict[str, A
         "status": "captured",
         "sessionId": session.session_id,
         "verdict": verdict.verdict,
+        "confidence": verdict.confidence,
         "sandbox": sandbox,
     }
 
@@ -1342,6 +1361,7 @@ def web_attack_detected(request: WebAttackDetectedRequest, response: Response) -
         "status": "captured",
         "sessionId": session.session_id,
         "verdict": verdict.verdict,
+        "confidence": verdict.confidence,
         "sandbox": sandbox,
     }
 

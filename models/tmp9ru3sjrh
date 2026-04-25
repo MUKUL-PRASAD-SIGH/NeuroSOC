@@ -1,0 +1,10 @@
+{
+  "last_seen_feedback_id": 4,
+  "last_trained_feedback_id": 4,
+  "last_run_at": "2026-04-25T01:56:28.756512+00:00",
+  "last_outcome": "waiting-for-feedback",
+  "last_model_version": "1.0.1",
+  "last_validation_f1": 1.0,
+  "total_runs": 59,
+  "total_successful_retrains": 1
+}

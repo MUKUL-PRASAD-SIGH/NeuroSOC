@@ -10,6 +10,7 @@ const MAX_ALERTS = 50;
 const DEV_MOCK_STREAM_INTERVAL_MS = 6000;
 const SOCKET_RECONNECT_DELAY_MS = 3000;
 let preferMockData = false;
+const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
 
 function isDevelopmentMockFallbackEnabled() {
   return import.meta.env.DEV;
@@ -86,7 +87,7 @@ function sortAlerts(alerts) {
 }
 
 export async function getStats() {
-  if (!getApiBaseUrl()) {
+  if (USE_MOCKS) {
     return mockStats;
   }
   return withMockFallback(
@@ -99,7 +100,7 @@ export async function getStats() {
 }
 
 export async function getModelVersion() {
-  if (!getApiBaseUrl()) {
+  if (USE_MOCKS) {
     return mockModelStatus;
   }
   return withMockFallback(
@@ -112,7 +113,7 @@ export async function getModelVersion() {
 }
 
 export async function getAlerts() {
-  if (!getApiBaseUrl()) {
+  if (USE_MOCKS) {
     return sortAlerts(mockAlerts);
   }
   return withMockFallback(
@@ -125,7 +126,7 @@ export async function getAlerts() {
 }
 
 export function subscribeToAlerts({ onMessage, onStatusChange, onError }) {
-  if ((!getApiBaseUrl() && import.meta.env.DEV) || (preferMockData && isDevelopmentMockFallbackEnabled())) {
+  if (USE_MOCKS || (preferMockData && isDevelopmentMockFallbackEnabled())) {
     return startMockAlertStream({ onMessage, onStatusChange });
   }
 

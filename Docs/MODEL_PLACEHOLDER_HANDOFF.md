@@ -47,7 +47,7 @@ Do not casually rename these fields.
 
 ## What Is Placeholder Right Now
 
-These areas are intentionally temporary until Phase 3 model quality and Phase 8 retraining are fully battle-tested on real traffic:
+ These areas are intentionally temporary until Phase 3 model quality and Phase 8 retraining are fully battle-tested on real traffic:
 
 ### Model confidence realism
 

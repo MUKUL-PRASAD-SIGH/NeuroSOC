@@ -58,7 +58,7 @@ export const MOCK_USERS: MockPortalUser[] = [
   {
     userId: 'usr-4012',
     email: '[test@mail.com]',
-    password: '12345678',
+    password: '[12345678]',
     displayName: 'Ava Morales',
     role: 'Platinum Personal Banking',
     behaviorProfile: 'steady',

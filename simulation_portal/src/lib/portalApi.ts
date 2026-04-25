@@ -20,8 +20,10 @@ export interface BankTransferPayload {
   confirmRoutingNumber?: string;
 }
 
+import { getMockUser } from './portalMock';
+
 const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-const USE_MOCKS = !API_BASE_URL || import.meta.env.VITE_USE_MOCKS === 'true';
+const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
 
 export function buildApiUrl(path: string) {
   return API_BASE_URL ? `${API_BASE_URL}${path}` : path;
@@ -49,6 +51,19 @@ async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
     throw new Error(message);
   }
   return data as T;
+}
+
+function normalizeSandbox(sandbox: any) {
+  if (!sandbox) {
+    return null;
+  }
+
+  return {
+    active: sandbox.active !== false,
+    mode: sandbox.mode || 'live',
+    sandboxToken: sandbox.sandboxToken || sandbox.sandbox_token || null,
+    sandboxPath: sandbox.sandboxPath || sandbox.sandbox_path || '/security-alert',
+  };
 }
 
 async function mockRequestJson<T>(input: string, init?: RequestInit): Promise<T> {
@@ -148,6 +163,33 @@ export function loginBank(payload: BankLoginPayload) {
       password: payload.password,
       session_id: payload.sessionId,
     }),
+  }).then((raw: any) => {
+    if (USE_MOCKS) {
+      return raw;
+    }
+
+    const profile = getMockUser(payload.email);
+    const authenticated = Boolean(profile && profile.password === payload.password);
+    const sandbox = normalizeSandbox(raw.sandbox);
+    const verdict = raw.verdict || (authenticated ? 'LEGITIMATE' : 'FORGETFUL_USER');
+
+    return {
+      authenticated,
+      user_id: raw.user_id || profile?.userId || payload.email,
+      displayName: raw.displayName || profile?.displayName,
+      sessionId: raw.sessionId || raw.session_id || payload.sessionId,
+      verdict,
+      confidence: typeof raw.confidence === 'number' ? raw.confidence : 0.85,
+      sandbox: sandbox || (verdict === 'HACKER' ? { active: true, mode: 'live', sandboxToken: null, sandboxPath: '/security-alert' } : null),
+      next: raw.next || ((sandbox?.active || verdict === 'HACKER') ? '/security-alert' : authenticated ? '/dashboard' : '/login'),
+      account: raw.account || profile?.account
+        ? {
+            balance: raw.account?.balance ?? profile?.account.balance,
+            accountMasked: raw.account?.accountMasked ?? profile?.account.accountMasked,
+          }
+        : undefined,
+      error: authenticated ? undefined : raw.error || 'Invalid credentials. Please try again.',
+    };
   });
 }
 
@@ -164,11 +206,25 @@ export function transferBank(payload: BankTransferPayload) {
     body: JSON.stringify({
       user_id: payload.userId,
       session_id: payload.sessionId,
-      destination: payload.destination,
+      recipient: payload.destination,
       amount: payload.amount,
       memo: payload.memo,
       confirm_routing_number: payload.confirmRoutingNumber || undefined,
     }),
+  }).then((raw: any) => {
+    if (USE_MOCKS) {
+      return raw;
+    }
+
+    const sandbox = normalizeSandbox(raw.sandbox);
+    return {
+      status: raw.status || (sandbox?.active ? 'sandboxed' : 'accepted'),
+      sessionId: raw.sessionId || raw.session_id || payload.sessionId,
+      verdict: raw.verdict || 'LEGITIMATE',
+      confidence: typeof raw.confidence === 'number' ? raw.confidence : 0.82,
+      sandbox: sandbox,
+      message: raw.message || (sandbox?.active ? 'Transfer moved into sandbox review.' : 'Transfer accepted for processing.'),
+    };
   });
 }
 
@@ -185,6 +241,17 @@ export function reportHoneypotHit(source: string, userId: string, sessionId: str
       user_id: userId,
       session_id: sessionId,
     }),
+  }).then((raw: any) => {
+    if (USE_MOCKS) {
+      return raw;
+    }
+
+    return {
+      status: raw.status || 'captured',
+      sessionId: raw.sessionId || raw.session_id || sessionId,
+      verdict: raw.verdict || 'HACKER',
+      sandbox: normalizeSandbox(raw.sandbox),
+    };
   });
 }
 
@@ -202,6 +269,17 @@ export function reportWebAttack(userId: string, sessionId: string, payload: stri
       user_id: userId,
       session_id: sessionId,
     }),
+  }).then((raw: any) => {
+    if (USE_MOCKS) {
+      return raw;
+    }
+
+    return {
+      status: raw.status || 'captured',
+      sessionId: raw.sessionId || raw.session_id || sessionId,
+      verdict: raw.verdict || 'HACKER',
+      sandbox: normalizeSandbox(raw.sandbox),
+    };
   });
 }
 

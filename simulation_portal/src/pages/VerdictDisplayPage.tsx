@@ -48,8 +48,8 @@ export default function VerdictDisplayPage() {
           </div>
         </div>
         <div className="flex-1 overflow-hidden">
-          <iframe 
-            src="/login" 
+          <iframe
+            src="/login"
             className="w-full h-full border-none"
             title="NovaTrust Banking Simulation"
           />
@@ -118,16 +118,16 @@ export default function VerdictDisplayPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="h-40 border border-slate-100 p-5 rounded bg-slate-50/50 flex flex-col">
                 <h3 className="text-[11px] font-bold uppercase text-slate-400 mb-4 tracking-widest">Confidence Matrix</h3>
                 <div className="flex items-end gap-1.5 flex-1 px-2 pb-2">
                   {[...Array(8)].map((_, i) => (
-                    <motion.div 
+                    <motion.div
                       key={i}
                       initial={{ height: 0 }}
                       animate={{ height: `${Math.random() * 80 + 20}%` }}
-                      className={`flex-1 rounded-t-sm ${i > 5 ? 'bg-amber-400' : 'bg-emerald-400'}`} 
+                      className={`flex-1 rounded-t-sm ${i > 5 ? 'bg-amber-400' : 'bg-emerald-400'}`}
                     />
                   ))}
                 </div>

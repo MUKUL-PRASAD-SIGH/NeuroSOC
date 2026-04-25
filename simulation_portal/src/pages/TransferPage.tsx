@@ -81,7 +81,7 @@ export default function TransferPage() {
 
         <form onSubmit={handleTransfer} className="space-y-6 bg-white p-10 md:p-12 rounded-lg border border-slate-200 shadow-sm overflow-hidden relative">
           {/* Honeypot */}
-          <input 
+          <input
             type="text"
             name="confirm_routing_number"
             value={confirmRouting}
@@ -94,7 +94,7 @@ export default function TransferPage() {
           <div className="grid md:grid-cols-2 gap-8">
             <div className="space-y-1.5">
               <label className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Recipient Identity</label>
-              <input 
+              <input
                 type="text"
                 required
                 className="w-full h-11 border border-slate-300 px-4 text-sm focus:border-bank-navy outline-none rounded-sm bg-slate-50/30 transition-all font-medium"
@@ -107,7 +107,7 @@ export default function TransferPage() {
               <label className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Amount (USD)</label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">$</span>
-                <input 
+                <input
                   type="number"
                   step="0.01"
                   required
@@ -122,7 +122,7 @@ export default function TransferPage() {
 
           <div className="space-y-1.5">
             <label className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Reference Ledger Memo</label>
-            <textarea 
+            <textarea
               className="w-full h-24 border border-slate-300 p-4 text-sm focus:border-bank-navy outline-none rounded-sm bg-slate-50/30 transition-all resize-none font-medium"
               placeholder="Detailed transaction rationale..."
               value={memo}
@@ -138,7 +138,7 @@ export default function TransferPage() {
             </p>
           </div>
 
-          <button 
+          <button
             type="submit"
             className="w-full h-12 bg-bank-navy text-white font-black text-xs uppercase tracking-[0.2em] rounded-sm hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
           >
@@ -146,7 +146,7 @@ export default function TransferPage() {
           </button>
 
           {isSuccess && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="absolute inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center p-8 z-20 text-center"

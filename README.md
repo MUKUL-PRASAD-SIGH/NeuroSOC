@@ -20,6 +20,10 @@
 13. [👥 Team & Human-in-the-Loop Design](#-team--human-in-the-loop-design)
 14. [🗺️ Roadmap](#️-roadmap)
 
+### 📄 External Docs
+
+- 📘 **Detailed Design Doc (Google Docs):**  
+  https://docs.google.com/document/d/1GcDYW006dY0nc87Vipmqk0Oph9lL2IFMOXp71v2yV8w/edit?tab=t.jpmwkbfntfso
 ---
 
 ## 🧠 What Makes This Different

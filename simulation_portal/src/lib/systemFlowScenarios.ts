@@ -979,6 +979,8 @@ async function runActiveHackerScenario(hooks: ScenarioHooks = {}): Promise<Scena
     webAttackPayload
   );
   const hit = await reportWebAttack(webAttackPayload.userId, webAttackPayload.sessionId, webAttackPayload.payload, webAttackPayload.sourceIp);
+  const latestVerdict = (await safeCurrentVerdict()) || (await safeUserVerdict('intruder-demo'));
+  
   emitLog(
     logs,
     hooks,

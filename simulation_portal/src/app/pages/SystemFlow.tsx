@@ -422,11 +422,16 @@ function VerdictCard({ verdict }: { verdict: PortalVerdictSnapshot | null }) {
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {metricCards.map((metric) => (
-          <div key={metric.label} className="rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-3">
+          <div key={metric.label} className="rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-3 relative group">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">{metric.label}</p>
             <p className={`mt-2 text-sm font-semibold ${verdictTone === 'rose' ? 'text-rose-700' : verdictTone === 'amber' ? 'text-amber-700' : verdictTone === 'emerald' ? 'text-emerald-700' : 'text-slate-700'}`}>
               {metric.value}
             </p>
+            {metric.label === 'Confidence' && (
+              <div className="absolute left-0 -top-10 hidden group-hover:block z-10 w-48 p-2 bg-slate-800 text-[10px] text-white rounded shadow-xl border border-white/10">
+                Formula: 0.4*SNN + 0.4*LNN + 0.2*Behavioral
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -505,7 +510,7 @@ const PHASE_HUMAN: Record<string, { title: string; what: string }> = {
   portal:     { title: 'Portal Session Opening',       what: 'The bank portal creates a live session and arms the behavioural tracker.' },
   behavioral: { title: 'Behavioural Stream Active',    what: 'Keystrokes, mouse moves, and click timing are being captured and vectorised.' },
   ensemble:   { title: 'SNN + LNN + XGBoost Scoring',  what: 'Three models fuse their scores — spike anomaly, behavioural drift, and traffic class.' },
-  decision:   { title: 'Decision Layer Firing',        what: 'The weighted confidence score is compared against the sandbox threshold.' },
+  decision:   { title: 'Decision Layer Firing',        what: 'The weighted confidence score (0.4*SNN + 0.4*LNN + 0.2*Behavioral) is compared against the sandbox threshold.' },
   route:      { title: 'Route Outcome Determined',     what: 'The session is assigned to safe, review, or hard sandbox based on the verdict.' },
   feedback:   { title: 'Feedback Loop Triggered',      what: 'The outcome is labelled and queued for the security feedback pipeline.' },
   retraining: { title: 'Retraining Guard Evaluated',   what: 'The model checks whether this run earns a malicious sample for the next retrain cycle.' },

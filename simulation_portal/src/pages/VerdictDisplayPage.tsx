@@ -158,9 +158,12 @@ export default function VerdictDisplayPage() {
                       {data.verdict}
                     </span>
                   </div>
-                  <div className="flex justify-between border-b border-slate-100 pb-2">
+                  <div className="flex justify-between border-b border-slate-100 pb-2 relative group">
                     <span>CONFIDENCE</span>
                     <span className="font-bold">{formatPercent(data.confidence)}</span>
+                    <div className="absolute left-0 -top-8 hidden group-hover:block z-10 p-2 bg-slate-800 text-[9px] text-white rounded shadow-xl border border-white/10">
+                      Ensemble: 0.4*SNN + 0.4*LNN + 0.2*Behavior
+                    </div>
                   </div>
                   <div className="flex justify-between border-b border-slate-100 pb-2">
                     <span>SANDBOX</span>

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
-import { getCurrentVerdict } from '../../lib/portalApi';
+import { useEffect, useMemo, useState } from 'react';
+import { getCurrentVerdict, getSandboxReplay } from '../../lib/portalApi';
+import { readPortalSession } from '../../lib/portalSession';
 
 interface Verdict {
   sessionId?: string | null;
-  user_id?: string;
+  userId?: string;
   snnScore: number;
   lnnClass: string;
   xgbClass: string;
@@ -11,25 +12,50 @@ interface Verdict {
   confidence: number;
   verdict: 'LEGITIMATE' | 'FORGETFUL_USER' | 'HACKER' | string;
   timestamp: string;
+  sandbox?: { active: boolean; mode?: string; sandboxToken?: string; sandboxPath?: string } | null;
 }
 
 export default function VerdictDisplay() {
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [replayCount, setReplayCount] = useState<number | null>(null);
+  const [sessionRef, setSessionRef] = useState(() => readPortalSession().sessionId);
 
   useEffect(() => {
+    let mounted = true;
+
     const fetchVerdict = async () => {
       try {
+        const session = readPortalSession();
+        if (mounted) {
+          setSessionRef(session.sessionId);
+        }
+
         const data = await getCurrentVerdict();
+        if (!mounted) {
+          return;
+        }
+
         setVerdict({
           ...data,
-          user_id: data.sessionId || 'active-session',
           timestamp: new Date().toISOString(),
         });
         setError(null);
         setLoading(false);
+
+        if (data.sessionId && data.sandbox?.active) {
+          const replay = await getSandboxReplay(data.sessionId);
+          if (mounted) {
+            setReplayCount(replay.actions.length);
+          }
+        } else if (mounted) {
+          setReplayCount(null);
+        }
       } catch (err) {
+        if (!mounted) {
+          return;
+        }
         setError('Failed to fetch verdict');
         setLoading(false);
       }
@@ -41,8 +67,18 @@ export default function VerdictDisplay() {
     // Poll every 2 seconds
     const interval = setInterval(fetchVerdict, 2000);
 
-    return () => clearInterval(interval);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, []);
+
+  const iframePath = useMemo(() => {
+    if (verdict?.sandbox?.active || verdict?.verdict === 'HACKER') {
+      return '/security-alert';
+    }
+    return '/login';
+  }, [verdict]);
 
   const getVerdictColor = (verdict: string, confidence: number) => {
     if (confidence < 0.5) return 'text-yellow-600 bg-yellow-100';
@@ -66,7 +102,7 @@ export default function VerdictDisplay() {
             <h2 className="font-['Playfair_Display'] text-xl font-bold">User Session</h2>
           </div>
           <iframe
-            src="/login"
+            src={iframePath}
             className="flex-1 w-full h-full"
             title="User Session"
           />
@@ -114,7 +150,7 @@ export default function VerdictDisplay() {
                     <span className="text-sm font-['Inter']">LIVE</span>
                   </div>
                 </div>
-                <p className="text-sm opacity-90 font-['Inter']">User: {verdict.user_id}</p>
+                <p className="text-sm opacity-90 font-['Inter']">User: {verdict.userId || sessionRef || 'active-session'}</p>
               </div>
 
               {/* Confidence Meter */}
@@ -173,6 +209,11 @@ export default function VerdictDisplay() {
                   </svg>
                   <span>Last updated: {new Date(verdict.timestamp).toLocaleTimeString()}</span>
                 </div>
+                <div className="mt-2 flex items-center gap-2 text-sm text-gray-400 font-['Inter']">
+                  <span>Iframe target: {iframePath}</span>
+                  <span>•</span>
+                  <span>Replay actions: {replayCount ?? 0}</span>
+                </div>
               </div>
 
               {/* System Status */}
@@ -194,6 +235,12 @@ export default function VerdictDisplay() {
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                     <span className="text-sm text-gray-400 font-['Inter']">API Integration Healthy</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${verdict.sandbox?.active ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                    <span className="text-sm text-gray-400 font-['Inter']">
+                      Sandbox {verdict.sandbox?.active ? `${verdict.sandbox.mode || 'active'} (${replayCount ?? 0} actions)` : 'inactive'}
+                    </span>
                   </div>
                 </div>
               </div>

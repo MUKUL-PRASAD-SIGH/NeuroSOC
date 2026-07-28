@@ -1,14 +1,75 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "snn": "snn_legacy_v1.pt",
   "lnn": "lnn_legacy_v1.pt",
-  "xgb": "xgboost_legacy_v1.json",
+  "xgb": "xgboost_feedback_20260425011307_4.json",
   "validation_f1": {
     "snn": null,
     "lnn": null,
-    "xgb": null
+    "xgb": 1.0
   },
-  "timestamp": "2026-04-25T00:00:00Z",
+  "timestamp": "2026-04-25T01:13:07.431028+00:00",
   "artifact_format": "legacy-v1",
-  "artifact_source": "artifacts/artifacts"
+  "artifact_source": "artifacts/artifacts",
+  "feedback_training": {
+    "validation_accuracy": 1.0,
+    "validation_f1": 1.0,
+    "training_rows": 137,
+    "validation_rows": 35,
+    "class_counts": {
+      "BENIGN": 24,
+      "BOT": 24,
+      "BRUTE_FORCE": 27,
+      "DDOS": 24,
+      "OTHER": 24,
+      "RECONNAISSANCE": 24,
+      "WEB_ATTACK": 25
+    },
+    "top_feature_importances": [
+      [
+        "feature_0",
+        3.894278049468994
+      ],
+      [
+        "feature_7",
+        3.7796006202697754
+      ],
+      [
+        "feature_1",
+        2.8361737728118896
+      ],
+      [
+        "feature_22",
+        2.1918680667877197
+      ],
+      [
+        "feature_77",
+        2.144421339035034
+      ],
+      [
+        "feature_2",
+        2.1108274459838867
+      ],
+      [
+        "feature_11",
+        1.8759589195251465
+      ],
+      [
+        "feature_35",
+        1.6315762996673584
+      ],
+      [
+        "feature_17",
+        1.2031196355819702
+      ],
+      [
+        "feature_5",
+        1.0367096662521362
+      ]
+    ],
+    "new_feedback_rows": 4,
+    "total_feedback_rows": 4,
+    "candidate_feedback_max_id": 4,
+    "previous_xgb_validation_f1": null
+  }
 }

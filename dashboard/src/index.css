@@ -110,6 +110,36 @@ body::before {
   opacity: 0.5;
 }
 
+.soc-tilt-panel {
+  transform-style: preserve-3d;
+  animation: socFloatCard 7.5s ease-in-out infinite;
+}
+
+.soc-stage-node {
+  position: relative;
+  transform-style: preserve-3d;
+  transform: perspective(1100px) rotateX(8deg) translateZ(0);
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    border-color 220ms ease,
+    background-color 220ms ease;
+}
+
+.soc-stage-node::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 45%);
+  opacity: 0.7;
+}
+
+.soc-stage-node-active {
+  animation: socHotPulse 1.6s ease-in-out infinite;
+}
+
 .leaflet-container {
   background: #ffffff;
   font-family: "IBM Plex Sans", sans-serif;
@@ -154,6 +184,28 @@ body::before {
   100% {
     transform: scale(2.4);
     opacity: 0;
+  }
+}
+
+@keyframes socFloatCard {
+  0%,
+  100% {
+    transform: translateY(0) rotateX(0deg);
+  }
+
+  50% {
+    transform: translateY(-4px) rotateX(2deg);
+  }
+}
+
+@keyframes socHotPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(25, 230, 255, 0), 0 14px 32px rgba(0, 0, 0, 0.18);
+  }
+
+  50% {
+    box-shadow: 0 0 0 1px rgba(25, 230, 255, 0.18), 0 0 28px rgba(25, 230, 255, 0.16), 0 22px 42px rgba(0, 0, 0, 0.26);
   }
 }
 

@@ -18,6 +18,7 @@ models/*.json
 # JavaScript build artifacts
 node_modules/
 dist/
+Docs/
 
 # Logs
 *.log
